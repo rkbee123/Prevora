@@ -134,76 +134,195 @@ export const verifyAdminOTP = async (email: string, otp: string) => {
 
 // Signal management functions
 export const createSignal = async (signalData: any) => {
-  const { data, error } = await supabase
-    .from('signals')
-    .insert(signalData)
-    .select()
-    .single();
-  return { data, error };
+  try {
+    console.log('Creating signal with data:', signalData);
+    
+    const { data, error } = await supabase
+      .from('signals')
+      .insert([signalData])
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Supabase error creating signal:', error);
+      throw error;
+    }
+    
+    console.log('Signal created successfully:', data);
+    return { data, error: null };
+  } catch (error) {
+    console.error('Error in createSignal:', error);
+    return { data: null, error };
+  }
 };
 
 export const getSignals = async (filters: any = {}) => {
-  let query = supabase
-    .from('signals')
-    .select('*')
-    .order('created_at', { ascending: false });
+  try {
+    let query = supabase
+      .from('signals')
+      .select('*')
+      .order('created_at', { ascending: false });
 
-  if (filters.location) {
-    query = query.ilike('location', `%${filters.location}%`);
+    if (filters.location) {
+      query = query.ilike('location', `%${filters.location}%`);
+    }
+
+    if (filters.type) {
+      query = query.eq('type', filters.type);
+    }
+
+    if (filters.severity) {
+      query = query.eq('severity', filters.severity);
+    }
+
+    const { data, error } = await query;
+    
+    if (error) {
+      console.error('Error fetching signals:', error);
+      return { data: [], error };
+    }
+    
+    return { data: data || [], error: null };
+  } catch (error) {
+    console.error('Error in getSignals:', error);
+    return { data: [], error };
   }
-
-  if (filters.type) {
-    query = query.eq('type', filters.type);
-  }
-
-  if (filters.severity) {
-    query = query.eq('severity', filters.severity);
-  }
-
-  const { data, error } = await query;
-  return { data, error };
 };
 
 export const getSignalCount = async () => {
-  const { count, error } = await supabase
-    .from('signals')
-    .select('*', { count: 'exact', head: true });
-  return { count, error };
+  try {
+    const { count, error } = await supabase
+      .from('signals')
+      .select('*', { count: 'exact', head: true });
+    
+    if (error) {
+      console.error('Error getting signal count:', error);
+      return { count: 0, error };
+    }
+    
+    return { count: count || 0, error: null };
+  } catch (error) {
+    console.error('Error in getSignalCount:', error);
+    return { count: 0, error };
+  }
+};
+
+export const deleteSignal = async (id: string) => {
+  try {
+    const { error } = await supabase
+      .from('signals')
+      .delete()
+      .eq('id', id);
+    
+    if (error) {
+      console.error('Error deleting signal:', error);
+      return { error };
+    }
+    
+    return { error: null };
+  } catch (error) {
+    console.error('Error in deleteSignal:', error);
+    return { error };
+  }
 };
 
 // Event management functions
 export const getEvents = async () => {
-  const { data, error } = await supabase
-    .from('events')
-    .select('*')
-    .order('created_at', { ascending: false });
-  return { data, error };
+  try {
+    const { data, error } = await supabase
+      .from('events')
+      .select('*')
+      .order('created_at', { ascending: false });
+    
+    if (error) {
+      console.error('Error fetching events:', error);
+      return { data: [], error };
+    }
+    
+    return { data: data || [], error: null };
+  } catch (error) {
+    console.error('Error in getEvents:', error);
+    return { data: [], error };
+  }
 };
 
 export const getEventById = async (id: string) => {
-  const { data, error } = await supabase
-    .from('events')
-    .select('*')
-    .eq('id', id)
-    .single();
-  return { data, error };
+  try {
+    const { data, error } = await supabase
+      .from('events')
+      .select('*')
+      .eq('id', id)
+      .single();
+    
+    if (error) {
+      console.error('Error fetching event:', error);
+      return { data: null, error };
+    }
+    
+    return { data, error: null };
+  } catch (error) {
+    console.error('Error in getEventById:', error);
+    return { data: null, error };
+  }
 };
 
 // Alert management functions
 export const getAlerts = async () => {
-  const { data, error } = await supabase
-    .from('alerts')
-    .select('*')
-    .order('issued_at', { ascending: false });
-  return { data, error };
+  try {
+    const { data, error } = await supabase
+      .from('alerts')
+      .select('*')
+      .order('issued_at', { ascending: false });
+    
+    if (error) {
+      console.error('Error fetching alerts:', error);
+      return { data: [], error };
+    }
+    
+    return { data: data || [], error: null };
+  } catch (error) {
+    console.error('Error in getAlerts:', error);
+    return { data: [], error };
+  }
 };
 
 // Blog management functions
 export const getBlogs = async () => {
-  const { data, error } = await supabase
-    .from('blogs')
-    .select('*')
-    .eq('published', true)
-    .order('published_at', { ascending: false });
-  return { data, error };
+  try {
+    const { data, error } = await supabase
+      .from('blogs')
+      .select('*')
+      .eq('published', true)
+      .order('published_at', { ascending: false });
+    
+    if (error) {
+      console.error('Error fetching blogs:', error);
+      return { data: [], error };
+    }
+    
+    return { data: data || [], error: null };
+  } catch (error) {
+    console.error('Error in getBlogs:', error);
+    return { data: [], error };
+  }
+};
+
+// Test database connection
+export const testConnection = async () => {
+  try {
+    const { data, error } = await supabase
+      .from('signals')
+      .select('count', { count: 'exact', head: true });
+    
+    if (error) {
+      console.error('Database connection test failed:', error);
+      return false;
+    }
+    
+    console.log('Database connection successful');
+    return true;
+  } catch (error) {
+    console.error('Database connection test error:', error);
+    return false;
+  }
 };
