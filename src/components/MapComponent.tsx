@@ -37,6 +37,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
 }) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
+  const markersRef = useRef<L.CircleMarker[]>([]);
 
   const getSeverityColor = (severity: string) => {
     switch (severity) {
@@ -56,14 +57,9 @@ const MapComponent: React.FC<MapComponentProps> = ({
     }
   };
 
+  // Initialize map only once
   useEffect(() => {
-    if (!mapRef.current) return;
-
-    // Clean up existing map
-    if (mapInstanceRef.current) {
-      mapInstanceRef.current.remove();
-      mapInstanceRef.current = null;
-    }
+    if (!mapRef.current || mapInstanceRef.current) return;
 
     // Initialize map
     mapInstanceRef.current = L.map(mapRef.current, {
@@ -84,7 +80,33 @@ const MapComponent: React.FC<MapComponentProps> = ({
       zoomOffset: 0
     }).addTo(mapInstanceRef.current);
 
-    // Add signals as markers
+    // Cleanup on unmount
+    return () => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+      }
+    };
+  }, []); // Empty dependency array - only run once
+
+  // Update map view when center or zoom changes
+  useEffect(() => {
+    if (mapInstanceRef.current) {
+      mapInstanceRef.current.setView(center, zoom);
+    }
+  }, [center, zoom]);
+
+  // Update markers when signals change
+  useEffect(() => {
+    if (!mapInstanceRef.current) return;
+
+    // Clear existing markers
+    markersRef.current.forEach(marker => {
+      mapInstanceRef.current?.removeLayer(marker);
+    });
+    markersRef.current = [];
+
+    // Add new markers
     signals.forEach((signal) => {
       if (mapInstanceRef.current && signal.lat && signal.lng) {
         const marker = L.circleMarker([signal.lat, signal.lng], {
@@ -95,6 +117,8 @@ const MapComponent: React.FC<MapComponentProps> = ({
           opacity: 1,
           fillOpacity: 0.8
         }).addTo(mapInstanceRef.current);
+
+        markersRef.current.push(marker);
 
         // Create popup content
         const popupContent = `
@@ -143,11 +167,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
     if (signals.length > 0) {
       const validSignals = signals.filter(s => s.lat && s.lng);
       if (validSignals.length > 0) {
-        const group = new L.FeatureGroup(
-          validSignals.map(signal => 
-            L.circleMarker([signal.lat, signal.lng])
-          )
-        );
+        const group = new L.FeatureGroup(markersRef.current);
         
         // Only fit bounds if we have multiple signals, otherwise use the center
         if (validSignals.length > 1) {
@@ -155,14 +175,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
         }
       }
     }
-
-    return () => {
-      if (mapInstanceRef.current) {
-        mapInstanceRef.current.remove();
-        mapInstanceRef.current = null;
-      }
-    };
-  }, [signals, center, zoom]);
+  }, [signals]);
 
   return (
     <div className="relative">
