@@ -63,9 +63,10 @@ export const getUserProfile = async (userId: string) => {
   const { data, error } = await supabase
     .from('user_profiles')
     .select('*')
-    .eq('id', userId)
-    .single();
-  return { data, error };
+    .eq('id', userId);
+  
+  // Return the first profile if found, otherwise null
+  return { data: data && data.length > 0 ? data[0] : null, error };
 };
 
 export const resetPassword = async (email: string) => {

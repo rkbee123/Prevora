@@ -1,4 +1,4 @@
-const OPENROUTER_API_KEY = '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';
+const OPENROUTER_API_KEY = import.meta.env.VITE_OPENROUTER_API_KEY;
 const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';
 
 export interface ChatMessage {
@@ -7,6 +7,12 @@ export interface ChatMessage {
 }
 
 export const generateAIResponse = async (messages: ChatMessage[]): Promise<string> => {
+  // Check if API key is available
+  if (!OPENROUTER_API_KEY) {
+    console.warn('OpenRouter API key not configured');
+    return 'AI assistant is currently unavailable. Please configure the OpenRouter API key to enable AI features.';
+  }
+
   try {
     const response = await fetch(`${OPENROUTER_BASE_URL}/chat/completions`, {
       method: 'POST',
@@ -38,6 +44,12 @@ export const generateAIResponse = async (messages: ChatMessage[]): Promise<strin
 };
 
 export const generateHealthReport = async (signals: any[], events: any[]): Promise<string> => {
+  // Check if API key is available
+  if (!OPENROUTER_API_KEY) {
+    console.warn('OpenRouter API key not configured');
+    return 'AI health report generation is currently unavailable. Please configure the OpenRouter API key to enable AI features.';
+  }
+
   const systemPrompt = `You are Panpath AI, a health intelligence assistant for the Prevora early disease detection platform. 
   Generate a comprehensive health report based on the provided signals and events data. 
   Focus on trends, patterns, risk assessment, and actionable recommendations.
