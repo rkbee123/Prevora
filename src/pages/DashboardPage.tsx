@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Bell, Settings, User, MapPin, TrendingUp, AlertTriangle, Calendar, Filter, Bot, Activity, Zap, Shield, Clock, ChevronRight, Eye, Download, BarChart3, Plus, RefreshCw } from 'lucide-react';
+import { Search, Bell, Settings, User, MapPin, TrendingUp, AlertTriangle, Calendar, Filter, Bot, Activity, Zap, Shield, Clock, ChevronRight, Eye, Download, BarChart3, Plus, RefreshCw, Sparkles, CheckCircle, Mail } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import MapComponent from '../components/MapComponent';
 import EventCard from '../components/EventCard';
 import AIChat from '../components/AIChat';
-import { getSignals, getCurrentUser, getUserProfile, getEvents } from '../lib/supabase';
+import { getSignals, getCurrentUser, getUserProfile, getEvents, checkEmailVerification, resendEmailVerification } from '../lib/supabase';
 import { generateHealthReport } from '../lib/openai';
 
 const DashboardPage = () => {
@@ -20,6 +20,8 @@ const DashboardPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [aiReport, setAiReport] = useState('');
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
+  const [emailVerified, setEmailVerified] = useState(true);
+  const [showEmailVerification, setShowEmailVerification] = useState(false);
 
   const metricCards = [
     {
@@ -119,8 +121,14 @@ const DashboardPage = () => {
       const { user: currentUser } = await getCurrentUser();
       if (currentUser) {
         setUser(currentUser);
+        
+        // Check email verification
+        const { verified } = await checkEmailVerification();
+        setEmailVerified(verified);
+        setShowEmailVerification(!verified);
+        
         const { data: profile } = await getUserProfile(currentUser.id);
-        setUserProfile(profile || null);
+        setUserProfile(profile);
       }
     } catch (error) {
       console.error('Error loading user data:', error);
@@ -158,6 +166,19 @@ const DashboardPage = () => {
       setAiReport('Unable to generate health report at this time. Please try again later.');
     } finally {
       setIsGeneratingReport(false);
+    }
+  };
+
+  const handleResendVerification = async () => {
+    try {
+      const { error } = await resendEmailVerification();
+      if (!error) {
+        alert('Verification email sent! Please check your inbox.');
+      } else {
+        alert('Error sending verification email: ' + error.message);
+      }
+    } catch (error) {
+      alert('Error sending verification email');
     }
   };
 
@@ -209,6 +230,37 @@ const DashboardPage = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 pt-20">
+      {/* Email Verification Banner */}
+      {showEmailVerification && !emailVerified && (
+        <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4">
+          <div className="container mx-auto px-4 sm:px-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <Mail className="h-5 w-5 text-yellow-600" />
+                <div>
+                  <p className="text-yellow-800 font-medium">Please verify your email address</p>
+                  <p className="text-yellow-700 text-sm">Check your inbox for a verification link to access all features.</p>
+                </div>
+              </div>
+              <div className="flex items-center space-x-3">
+                <button
+                  onClick={handleResendVerification}
+                  className="px-4 py-2 bg-yellow-600 text-white rounded-lg text-sm font-medium hover:bg-yellow-700 transition-colors"
+                >
+                  Resend Email
+                </button>
+                <button
+                  onClick={() => setShowEmailVerification(false)}
+                  className="text-yellow-600 hover:text-yellow-800"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="bg-white shadow-sm border-b border-gray-200 relative z-10">
         <div className="container mx-auto px-4 sm:px-6 py-4">
@@ -217,6 +269,11 @@ const DashboardPage = () => {
             <div>
               <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
                 Good Morning, {getUserDisplayName()}
+                {!emailVerified && (
+                  <span className="ml-2 px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full">
+                    Email Pending
+                  </span>
+                )}
               </h1>
               <p className="text-gray-600 text-sm sm:text-base">Here's an overview of recent disease signals and clusters detected.</p>
             </div>
@@ -332,7 +389,11 @@ const DashboardPage = () => {
               disabled={isGeneratingReport}
               className="px-4 sm:px-6 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg font-medium hover:shadow-lg transition-all duration-300 flex items-center space-x-2 disabled:opacity-50"
             >
-              <Bot className="h-4 w-4" />
+              {isGeneratingReport ? (
+                <Sparkles className="h-4 w-4 animate-spin" />
+              ) : (
+                <Bot className="h-4 w-4" />
+              )}
               <span className="hidden sm:inline">{isGeneratingReport ? 'Generating...' : 'AI Report'}</span>
               <span className="sm:hidden">{isGeneratingReport ? '...' : 'AI'}</span>
             </button>
@@ -350,9 +411,10 @@ const DashboardPage = () => {
             <div className="flex items-center space-x-3 mb-4">
               <Bot className="h-6 w-6 text-purple-600" />
               <h3 className="text-lg font-bold text-gray-900">AI Health Intelligence Report</h3>
+              <Sparkles className="h-5 w-5 text-purple-600" />
             </div>
             <div className="prose prose-sm max-w-none text-gray-700">
-              <p className="whitespace-pre-wrap">{aiReport}</p>
+              <div className="whitespace-pre-wrap">{aiReport}</div>
             </div>
           </div>
         )}
@@ -530,13 +592,22 @@ const DashboardPage = () => {
       <div className="fixed bottom-6 right-6 z-50">
         <button 
           onClick={() => setShowAIChat(!showAIChat)}
-          className="w-14 h-14 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center group"
+          className="w-14 h-14 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center group relative"
         >
           <Bot className="h-6 w-6 text-white group-hover:scale-110 transition-transform" />
+          <Sparkles className="h-3 w-3 absolute -top-1 -right-1 text-yellow-300 animate-pulse" />
         </button>
       </div>
 
-      <AIChat isOpen={showAIChat} onClose={() => setShowAIChat(false)} />
+      <AIChat 
+        isOpen={showAIChat} 
+        onClose={() => setShowAIChat(false)}
+        context={{
+          signalCount: signals.length,
+          eventCount: events.filter(e => e.status === 'active').length,
+          recentActivity: signals.length > 0 ? 'Active monitoring' : 'Normal monitoring'
+        }}
+      />
     </div>
   );
 };

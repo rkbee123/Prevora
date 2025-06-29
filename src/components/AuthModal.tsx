@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { X, Mail, Lock, User, Building, Eye, EyeOff, Shield, CheckCircle, AlertCircle, UserCheck } from 'lucide-react';
-import { signUp, signIn, resetPassword } from '../lib/supabase';
+import { X, Mail, Lock, User, Building, Eye, EyeOff, Shield, CheckCircle, AlertCircle, UserCheck, Send, Clock } from 'lucide-react';
+import { signUp, signIn, resetPassword, sendAdminOTP, verifyAdminOTP, resendEmailVerification } from '../lib/supabase';
 
 interface AuthModalProps {
   mode: 'login' | 'signup' | 'admin';
@@ -10,6 +10,7 @@ interface AuthModalProps {
 
 const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) => {
   const [formData, setFormData] = useState({
+    identifier: '', // Can be email or username for login
     email: '',
     password: '',
     confirmPassword: '',
@@ -67,13 +68,11 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
         if (error) {
           setError(error.message);
         } else {
-          setSuccess('Account created! Please check your email to verify your account.');
-          setTimeout(() => {
-            onClose();
-          }, 3000);
+          setSuccess('Account created! Please check your email for verification link before logging in.');
+          setStep(2); // Move to email verification step
         }
       } else if (mode === 'login') {
-        const { data, error } = await signIn(formData.email, formData.password);
+        const { data, error } = await signIn(formData.identifier, formData.password);
         
         if (error) {
           setError(error.message);
@@ -86,19 +85,25 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
         }
       } else if (mode === 'admin') {
         if (step === 1) {
-          // Simulate OTP sending
-          setStep(2);
-          setSuccess('OTP sent to your email');
+          // Send OTP to admin email
+          const { error } = await sendAdminOTP(formData.email);
+          if (error) {
+            setError(error.message);
+          } else {
+            setStep(2);
+            setSuccess('OTP sent to your email address');
+          }
         } else {
-          // Simulate OTP verification
-          if (formData.otp === '123456') {
+          // Verify OTP
+          const { error } = await verifyAdminOTP(formData.email, formData.otp);
+          if (error) {
+            setError(error.message);
+          } else {
             setSuccess('Admin login successful!');
             setTimeout(() => {
               onClose();
               window.location.href = '/admin';
             }, 1000);
-          } else {
-            setError('Invalid OTP. Please try again.');
           }
         }
       }
@@ -110,18 +115,31 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
   };
 
   const handleForgotPassword = async () => {
-    if (!formData.email) {
+    if (!formData.identifier) {
       setError('Please enter your email address');
       return;
     }
 
     setIsLoading(true);
-    const { error } = await resetPassword(formData.email);
+    const { error } = await resetPassword(formData.identifier);
     
     if (error) {
       setError(error.message);
     } else {
       setSuccess('Password reset email sent!');
+    }
+    
+    setIsLoading(false);
+  };
+
+  const handleResendVerification = async () => {
+    setIsLoading(true);
+    const { error } = await resendEmailVerification();
+    
+    if (error) {
+      setError(error.message);
+    } else {
+      setSuccess('Verification email sent again!');
     }
     
     setIsLoading(false);
@@ -144,20 +162,20 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
       )}
 
       <div>
-        <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-          Email Address
+        <label htmlFor="identifier" className="block text-sm font-medium text-gray-700 mb-2">
+          Email or Username
         </label>
         <div className="relative">
-          <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+          <UserCheck className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
           <input
-            type="email"
-            id="email"
-            name="email"
-            value={formData.email}
+            type="text"
+            id="identifier"
+            name="identifier"
+            value={formData.identifier}
             onChange={handleInputChange}
             required
             className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-            placeholder="your.email@example.com"
+            placeholder="Enter email or username"
           />
         </div>
       </div>
@@ -220,203 +238,241 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
     </form>
   );
 
-  const renderSignup = () => (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      {error && (
-        <div className="flex items-center space-x-2 p-3 bg-red-50 border border-red-200 rounded-lg">
-          <AlertCircle className="h-5 w-5 text-red-600" />
-          <span className="text-red-700 text-sm">{error}</span>
-        </div>
-      )}
-
-      {success && (
-        <div className="flex items-center space-x-2 p-3 bg-green-50 border border-green-200 rounded-lg">
-          <CheckCircle className="h-5 w-5 text-green-600" />
-          <span className="text-green-700 text-sm">{success}</span>
-        </div>
-      )}
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div>
-          <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-2">
-            Username *
-          </label>
-          <div className="relative">
-            <UserCheck className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-            <input
-              type="text"
-              id="username"
-              name="username"
-              value={formData.username}
-              onChange={handleInputChange}
-              required
-              className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-              placeholder="Choose a username"
-            />
+  const renderSignup = () => {
+    if (step === 2) {
+      return (
+        <div className="text-center space-y-6">
+          <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+            <CheckCircle className="h-12 w-12 text-green-600 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-green-900 mb-2">Check Your Email!</h3>
+            <p className="text-green-700 text-sm">
+              We've sent a verification link to <strong>{formData.email}</strong>. 
+              Please click the link in your email to verify your account before logging in.
+            </p>
           </div>
-        </div>
 
-        <div>
-          <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-2">
-            Full Name
-          </label>
-          <div className="relative">
-            <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-            <input
-              type="text"
-              id="fullName"
-              name="fullName"
-              value={formData.fullName}
-              onChange={handleInputChange}
-              className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-              placeholder="Your full name"
-            />
-          </div>
-        </div>
-      </div>
-
-      <div>
-        <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-          Email Address *
-        </label>
-        <div className="relative">
-          <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-          <input
-            type="email"
-            id="email"
-            name="email"
-            value={formData.email}
-            onChange={handleInputChange}
-            required
-            className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-            placeholder="your.email@example.com"
-          />
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div>
-          <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-            Password *
-          </label>
-          <div className="relative">
-            <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-            <input
-              type={showPassword ? 'text' : 'password'}
-              id="password"
-              name="password"
-              value={formData.password}
-              onChange={handleInputChange}
-              required
-              className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-              placeholder="Create a password"
-            />
+          <div className="space-y-4">
             <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              onClick={handleResendVerification}
+              disabled={isLoading}
+              className="w-full px-6 py-3 border border-blue-600 text-blue-600 rounded-lg font-medium hover:bg-blue-50 transition-colors disabled:opacity-50"
             >
-              {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+              {isLoading ? 'Sending...' : 'Resend Verification Email'}
+            </button>
+
+            <button
+              onClick={() => onSwitchMode('login')}
+              className="w-full px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-semibold hover:shadow-lg transition-all duration-300"
+            >
+              Go to Login
             </button>
           </div>
+
+          <div className="text-xs text-gray-500">
+            <p>Didn't receive the email? Check your spam folder or try resending.</p>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {error && (
+          <div className="flex items-center space-x-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+            <AlertCircle className="h-5 w-5 text-red-600" />
+            <span className="text-red-700 text-sm">{error}</span>
+          </div>
+        )}
+
+        {success && (
+          <div className="flex items-center space-x-2 p-3 bg-green-50 border border-green-200 rounded-lg">
+            <CheckCircle className="h-5 w-5 text-green-600" />
+            <span className="text-green-700 text-sm">{success}</span>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-2">
+              Username *
+            </label>
+            <div className="relative">
+              <UserCheck className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+              <input
+                type="text"
+                id="username"
+                name="username"
+                value={formData.username}
+                onChange={handleInputChange}
+                required
+                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                placeholder="Choose a username"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-2">
+              Full Name
+            </label>
+            <div className="relative">
+              <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+              <input
+                type="text"
+                id="fullName"
+                name="fullName"
+                value={formData.fullName}
+                onChange={handleInputChange}
+                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                placeholder="Your full name"
+              />
+            </div>
+          </div>
         </div>
 
         <div>
-          <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-2">
-            Confirm Password *
+          <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+            Email Address *
           </label>
           <div className="relative">
-            <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+            <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
             <input
-              type="password"
-              id="confirmPassword"
-              name="confirmPassword"
-              value={formData.confirmPassword}
+              type="email"
+              id="email"
+              name="email"
+              value={formData.email}
               onChange={handleInputChange}
               required
               className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-              placeholder="Confirm your password"
+              placeholder="your.email@example.com"
             />
           </div>
         </div>
-      </div>
 
-      {/* Onboarding Survey */}
-      <div className="bg-blue-50 rounded-lg p-4 space-y-4">
-        <h4 className="font-medium text-gray-900">Tell us about yourself</h4>
-        
-        <div>
-          <label htmlFor="userType" className="block text-sm font-medium text-gray-700 mb-2">
-            What best describes you?
-          </label>
-          <select
-            id="userType"
-            name="userType"
-            value={formData.userType}
-            onChange={handleInputChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option value="researcher">Researcher</option>
-            <option value="ngo">NGO</option>
-            <option value="health_dept">Health Department</option>
-            <option value="student">Student</option>
-            <option value="other">Other</option>
-          </select>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+              Password *
+            </label>
+            <div className="relative">
+              <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+              <input
+                type={showPassword ? 'text' : 'password'}
+                id="password"
+                name="password"
+                value={formData.password}
+                onChange={handleInputChange}
+                required
+                className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                placeholder="Create a password"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-2">
+              Confirm Password *
+            </label>
+            <div className="relative">
+              <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+              <input
+                type="password"
+                id="confirmPassword"
+                name="confirmPassword"
+                value={formData.confirmPassword}
+                onChange={handleInputChange}
+                required
+                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                placeholder="Confirm your password"
+              />
+            </div>
+          </div>
         </div>
 
-        <div>
-          <label htmlFor="orgName" className="block text-sm font-medium text-gray-700 mb-2">
-            Organization Name (Optional)
-          </label>
-          <div className="relative">
-            <Building className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-            <input
-              type="text"
-              id="orgName"
-              name="orgName"
-              value={formData.orgName}
+        {/* Onboarding Survey */}
+        <div className="bg-blue-50 rounded-lg p-4 space-y-4">
+          <h4 className="font-medium text-gray-900">Tell us about yourself</h4>
+          
+          <div>
+            <label htmlFor="userType" className="block text-sm font-medium text-gray-700 mb-2">
+              What best describes you?
+            </label>
+            <select
+              id="userType"
+              name="userType"
+              value={formData.userType}
               onChange={handleInputChange}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="Your organization"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="researcher">Researcher</option>
+              <option value="ngo">NGO</option>
+              <option value="health_dept">Health Department</option>
+              <option value="student">Student</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+
+          <div>
+            <label htmlFor="orgName" className="block text-sm font-medium text-gray-700 mb-2">
+              Organization Name (Optional)
+            </label>
+            <div className="relative">
+              <Building className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+              <input
+                type="text"
+                id="orgName"
+                name="orgName"
+                value={formData.orgName}
+                onChange={handleInputChange}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Your organization"
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              id="subscribed"
+              name="subscribed"
+              checked={formData.subscribed}
+              onChange={handleInputChange}
+              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
             />
+            <label htmlFor="subscribed" className="text-sm text-gray-700">
+              Subscribe to early updates & research alerts
+            </label>
           </div>
         </div>
 
-        <div className="flex items-center space-x-2">
-          <input
-            type="checkbox"
-            id="subscribed"
-            name="subscribed"
-            checked={formData.subscribed}
-            onChange={handleInputChange}
-            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-          />
-          <label htmlFor="subscribed" className="text-sm text-gray-700">
-            Subscribe to early updates & research alerts
-          </label>
-        </div>
-      </div>
-
-      <button
-        type="submit"
-        disabled={isLoading}
-        className="w-full px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-semibold hover:shadow-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        {isLoading ? 'Creating account...' : 'Sign Up & Verify Email'}
-      </button>
-
-      <div className="text-center text-sm text-gray-600">
-        Already have an account?{' '}
         <button
-          type="button"
-          onClick={() => onSwitchMode('login')}
-          className="text-blue-600 hover:text-blue-700 font-medium"
+          type="submit"
+          disabled={isLoading}
+          className="w-full px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-semibold hover:shadow-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          Sign in
+          {isLoading ? 'Creating account...' : 'Sign Up & Verify Email'}
         </button>
-      </div>
-    </form>
-  );
+
+        <div className="text-center text-sm text-gray-600">
+          Already have an account?{' '}
+          <button
+            type="button"
+            onClick={() => onSwitchMode('login')}
+            className="text-blue-600 hover:text-blue-700 font-medium"
+          >
+            Sign in
+          </button>
+        </div>
+      </form>
+    );
+  };
 
   const renderAdmin = () => (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -439,7 +495,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
           <div className="text-center mb-6">
             <Shield className="h-12 w-12 text-blue-600 mx-auto mb-2" />
             <h3 className="text-lg font-semibold text-gray-900">Admin Access</h3>
-            <p className="text-sm text-gray-600">Secure login with one-time passcode</p>
+            <p className="text-sm text-gray-600">Secure login with email verification</p>
           </div>
 
           <div>
@@ -464,9 +520,19 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-semibold hover:shadow-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-semibold hover:shadow-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
           >
-            {isLoading ? 'Sending OTP...' : 'Send OTP'}
+            {isLoading ? (
+              <>
+                <Send className="h-4 w-4 animate-pulse" />
+                <span>Sending OTP...</span>
+              </>
+            ) : (
+              <>
+                <Send className="h-4 w-4" />
+                <span>Send Verification Code</span>
+              </>
+            )}
           </button>
         </>
       ) : (
@@ -474,25 +540,28 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
           <div className="text-center mb-6">
             <CheckCircle className="h-12 w-12 text-green-600 mx-auto mb-2" />
             <h3 className="text-lg font-semibold text-gray-900">Check Your Email</h3>
-            <p className="text-sm text-gray-600">We've sent a one-time passcode to {formData.email}</p>
+            <p className="text-sm text-gray-600">We've sent a verification code to {formData.email}</p>
             <p className="text-xs text-gray-500 mt-2">For demo purposes, use: 123456</p>
           </div>
 
           <div>
             <label htmlFor="otp" className="block text-sm font-medium text-gray-700 mb-2">
-              Enter OTP Code
+              Enter Verification Code
             </label>
-            <input
-              type="text"
-              id="otp"
-              name="otp"
-              value={formData.otp}
-              onChange={handleInputChange}
-              required
-              maxLength={6}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors text-center text-2xl font-mono tracking-widest"
-              placeholder="000000"
-            />
+            <div className="relative">
+              <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+              <input
+                type="text"
+                id="otp"
+                name="otp"
+                value={formData.otp}
+                onChange={handleInputChange}
+                required
+                maxLength={6}
+                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors text-center text-2xl font-mono tracking-widest"
+                placeholder="000000"
+              />
+            </div>
           </div>
 
           <button
@@ -509,7 +578,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
               onClick={() => setStep(1)}
               className="text-blue-600 hover:text-blue-700 text-sm font-medium"
             >
-              Resend OTP
+              Resend Code
             </button>
           </div>
         </>

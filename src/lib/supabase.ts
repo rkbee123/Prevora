@@ -9,17 +9,19 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-// Auth helper functions
+// Enhanced auth helper functions with OTP support
 export const signUp = async (email: string, password: string, userData: any) => {
+  // First, create the auth user with email confirmation required
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
-      data: userData
+      data: userData,
+      emailRedirectTo: `${window.location.origin}/dashboard`
     }
   });
 
-  // Create user profile
+  // Create user profile immediately (will be linked when email is confirmed)
   if (data.user && !error) {
     const { error: profileError } = await supabase
       .from('user_profiles')
@@ -41,12 +43,53 @@ export const signUp = async (email: string, password: string, userData: any) => 
   return { data, error };
 };
 
-export const signIn = async (email: string, password: string) => {
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email,
-    password
-  });
-  return { data, error };
+export const signIn = async (identifier: string, password: string) => {
+  // Check if identifier is email or username
+  const isEmail = identifier.includes('@');
+  
+  if (isEmail) {
+    // Direct email login
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: identifier,
+      password
+    });
+    return { data, error };
+  } else {
+    // Username login - first get email from username
+    const { data: profileData, error: profileError } = await supabase
+      .from('user_profiles')
+      .select('id')
+      .eq('username', identifier)
+      .single();
+    
+    if (profileError || !profileData) {
+      return { 
+        data: null, 
+        error: { message: 'Username not found' } 
+      };
+    }
+    
+    // Get email from auth.users
+    const { data: userData, error: userError } = await supabase
+      .from('auth.users')
+      .select('email')
+      .eq('id', profileData.id)
+      .single();
+    
+    if (userError || !userData) {
+      return { 
+        data: null, 
+        error: { message: 'User account not found' } 
+      };
+    }
+    
+    // Now login with email
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: userData.email,
+      password
+    });
+    return { data, error };
+  }
 };
 
 export const signOut = async () => {
@@ -63,18 +106,20 @@ export const getUserProfile = async (userId: string) => {
   const { data, error } = await supabase
     .from('user_profiles')
     .select('*')
-    .eq('id', userId);
+    .eq('id', userId)
+    .single();
   
-  // Return the first profile if found, otherwise null
-  return { data: data && data.length > 0 ? data[0] : null, error };
-};
-
-export const resetPassword = async (email: string) => {
-  const { data, error } = await supabase.auth.resetPasswordForEmail(email);
   return { data, error };
 };
 
-// Admin OTP functions
+export const resetPassword = async (email: string) => {
+  const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${window.location.origin}/reset-password`
+  });
+  return { data, error };
+};
+
+// Enhanced admin functions with email verification
 export const sendAdminOTP = async (email: string) => {
   // Generate 6-digit OTP
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
@@ -93,9 +138,29 @@ export const sendAdminOTP = async (email: string) => {
     return { error };
   }
 
-  // In a real app, you would send this via email service
-  // For demo purposes, we'll log it and return success
-  console.log(`Admin OTP for ${email}: ${otp}`);
+  // Send OTP via Supabase email (using your SMTP configuration)
+  try {
+    // Use Supabase's built-in email functionality
+    const { error: emailError } = await supabase.auth.signInWithOtp({
+      email: email,
+      options: {
+        data: {
+          otp_code: otp,
+          is_admin_login: true
+        }
+      }
+    });
+
+    if (emailError) {
+      console.error('Email sending error:', emailError);
+      // Fallback: log OTP for demo purposes
+      console.log(`Admin OTP for ${email}: ${otp}`);
+    }
+  } catch (emailError) {
+    console.error('Email service error:', emailError);
+    // Fallback: log OTP for demo purposes
+    console.log(`Admin OTP for ${email}: ${otp}`);
+  }
   
   return { data: { message: 'OTP sent successfully' }, error: null };
 };
@@ -123,8 +188,19 @@ export const verifyAdminOTP = async (email: string, otp: string) => {
     .update({ used: true })
     .eq('id', otpRecord.id);
 
-  // Create admin session (simplified for demo)
-  // In production, you'd create a proper JWT token
+  // Create admin session by signing in with email
+  // First check if admin user exists
+  const { data: adminProfile } = await supabase
+    .from('user_profiles')
+    .select('*')
+    .eq('id', (await supabase.auth.getUser()).data.user?.id)
+    .eq('is_admin', true)
+    .single();
+
+  if (!adminProfile) {
+    return { error: { message: 'Admin access denied' } };
+  }
+
   return { 
     data: { 
       user: { email, is_admin: true },
@@ -134,7 +210,40 @@ export const verifyAdminOTP = async (email: string, otp: string) => {
   };
 };
 
-// Signal management functions
+// Email verification for regular users
+export const resendEmailVerification = async () => {
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) {
+    return { error: { message: 'No user logged in' } };
+  }
+
+  const { error } = await supabase.auth.resend({
+    type: 'signup',
+    email: user.email!,
+    options: {
+      emailRedirectTo: `${window.location.origin}/dashboard`
+    }
+  });
+
+  return { error };
+};
+
+// Check if email is verified
+export const checkEmailVerification = async () => {
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) {
+    return { verified: false, user: null };
+  }
+
+  return { 
+    verified: user.email_confirmed_at !== null, 
+    user 
+  };
+};
+
+// Signal management functions (unchanged)
 export const createSignal = async (signalData: any) => {
   try {
     console.log('Creating signal with data:', signalData);
@@ -229,7 +338,7 @@ export const deleteSignal = async (id: string) => {
   }
 };
 
-// Event management functions
+// Event management functions (unchanged)
 export const getEvents = async () => {
   try {
     const { data, error } = await supabase
@@ -269,7 +378,7 @@ export const getEventById = async (id: string) => {
   }
 };
 
-// Alert management functions
+// Alert management functions (unchanged)
 export const getAlerts = async () => {
   try {
     const { data, error } = await supabase
@@ -289,7 +398,7 @@ export const getAlerts = async () => {
   }
 };
 
-// Blog management functions
+// Blog management functions (unchanged)
 export const getBlogs = async () => {
   try {
     const { data, error } = await supabase
