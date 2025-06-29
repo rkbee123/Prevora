@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Search, Bell, Settings, User, MapPin, TrendingUp, AlertTriangle, Calendar, Filter, Bot, Activity, Zap, Shield, Clock, ChevronRight, Eye, Download, BarChart3, Plus, RefreshCw } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import MapComponent from '../components/MapComponent';
-import { getSignals, getCurrentUser, getUserProfile } from '../lib/supabase';
+import EventCard from '../components/EventCard';
+import { getSignals, getCurrentUser, getUserProfile, getEvents } from '../lib/supabase';
 
 const DashboardPage = () => {
   const [selectedDate, setSelectedDate] = useState('2025-06-28');
@@ -10,6 +11,7 @@ const DashboardPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showAIChat, setShowAIChat] = useState(false);
   const [signals, setSignals] = useState([]);
+  const [events, setEvents] = useState([]);
   const [filteredSignals, setFilteredSignals] = useState([]);
   const [user, setUser] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
@@ -25,8 +27,8 @@ const DashboardPage = () => {
       icon: Activity
     },
     {
-      title: 'New Events This Week',
-      value: Math.floor(signals.length / 5).toString(),
+      title: 'Active Events',
+      value: events.filter(e => e.status === 'active').length.toString(),
       change: '+2',
       trend: 'up',
       description: 'Cluster events generated',
@@ -50,71 +52,35 @@ const DashboardPage = () => {
     }
   ];
 
-  const activeEvents = [
-    {
-      id: 34,
-      title: 'Cough cluster detected – Mumbai, Andheri',
-      location: 'Andheri West, Mumbai',
-      type: 'Cough Spike',
-      severity: 'high',
-      signals: 21,
-      timeAgo: '2 hours ago',
-      description: 'Unusual spike in cough-related vibration signals detected via wearables',
-      coordinates: [19.1136, 72.8697]
-    },
-    {
-      id: 35,
-      title: 'Wastewater viral traces – Delhi Central',
-      location: 'Central District, Delhi',
-      type: 'Wastewater',
-      severity: 'medium',
-      signals: 15,
-      timeAgo: '6 hours ago',
-      description: 'Moderate increase in viral load detected in community sampling',
-      coordinates: [28.6139, 77.2090]
-    },
-    {
-      id: 36,
-      title: 'Pharmacy trend anomaly – Bangalore',
-      location: 'Tech Corridor, Bangalore',
-      type: 'Pharmacy',
-      severity: 'low',
-      signals: 8,
-      timeAgo: '12 hours ago',
-      description: 'Rise in fever medication purchases across major pharmacy chains',
-      coordinates: [12.9716, 77.5946]
-    }
-  ];
-
   const recentActivity = [
     {
       id: 1,
-      action: 'New cough signal from Mumbai',
+      action: 'New event created from signal cluster',
       time: '5 minutes ago',
-      type: 'signal',
-      user: 'System',
-      icon: Activity
+      type: 'event',
+      user: 'AI System',
+      icon: Zap
     },
     {
       id: 2,
-      action: 'Event cluster auto-generated',
+      action: 'High severity signal detected',
+      time: '15 minutes ago',
+      type: 'signal',
+      user: 'Monitoring System',
+      icon: Activity
+    },
+    {
+      id: 3,
+      action: 'Event #34 updated with new signals',
       time: '1 hour ago',
       type: 'event',
       user: 'AI Engine',
       icon: Zap
     },
     {
-      id: 3,
-      action: 'Admin note added to event #34',
-      time: '2 hours ago',
-      type: 'note',
-      user: 'Dr. Abraham',
-      icon: User
-    },
-    {
       id: 4,
-      action: 'Weekly report generated',
-      time: '1 day ago',
+      action: 'Weekly trend analysis completed',
+      time: '2 hours ago',
       type: 'report',
       user: 'System',
       icon: BarChart3
@@ -124,7 +90,11 @@ const DashboardPage = () => {
   // Load user data and signals on component mount
   useEffect(() => {
     loadUserData();
-    loadSignals();
+    loadData();
+    
+    // Set up auto-refresh every 30 seconds
+    const interval = setInterval(loadData, 30000);
+    return () => clearInterval(interval);
   }, []);
 
   // Filter signals when search term changes
@@ -146,29 +116,32 @@ const DashboardPage = () => {
       if (currentUser) {
         setUser(currentUser);
         const { data: profile } = await getUserProfile(currentUser.id);
-        setUserProfile(profile);
+        setUserProfile(profile?.[0] || null);
       }
     } catch (error) {
       console.error('Error loading user data:', error);
     }
   };
 
-  const loadSignals = async () => {
-    setIsLoading(true);
+  const loadData = async () => {
     try {
-      const { data: signalsData } = await getSignals();
-      if (signalsData) {
-        setSignals(signalsData);
+      const [signalsResult, eventsResult] = await Promise.all([
+        getSignals(),
+        getEvents()
+      ]);
+      
+      if (signalsResult.data) {
+        setSignals(signalsResult.data);
+      }
+      
+      if (eventsResult.data) {
+        setEvents(eventsResult.data);
       }
     } catch (error) {
-      console.error('Error loading signals:', error);
+      console.error('Error loading data:', error);
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const handleSearch = () => {
-    // Search is handled by useEffect when searchTerm changes
   };
 
   const getSeverityColor = (severity: string) => {
@@ -189,7 +162,7 @@ const DashboardPage = () => {
     }
   };
 
-  // Combine real signals with mock events for map display
+  // Combine real signals with events for map display
   const mapSignals = [
     ...signals.map(signal => ({
       id: signal.id,
@@ -199,15 +172,6 @@ const DashboardPage = () => {
       severity: signal.severity as 'low' | 'medium' | 'high',
       location: signal.location,
       timestamp: signal.created_at
-    })),
-    ...activeEvents.map(event => ({
-      id: event.id.toString(),
-      lat: event.coordinates[0],
-      lng: event.coordinates[1],
-      type: event.type,
-      severity: event.severity as 'low' | 'medium' | 'high',
-      location: event.location,
-      timestamp: event.timeAgo
     }))
   ];
 
@@ -220,6 +184,8 @@ const DashboardPage = () => {
     }
     return 'User';
   };
+
+  const activeEvents = events.filter(e => e.status === 'active').slice(0, 6);
 
   return (
     <div className="min-h-screen bg-gray-50 pt-20">
@@ -254,7 +220,9 @@ const DashboardPage = () => {
                   className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors relative"
                 >
                   <Bell className="h-6 w-6" />
-                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">3</span>
+                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+                    {events.filter(e => e.status === 'active' && e.severity === 'high').length}
+                  </span>
                 </Link>
                 
                 <button className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
@@ -334,7 +302,7 @@ const DashboardPage = () => {
 
           <div className="flex items-center space-x-3">
             <button 
-              onClick={loadSignals}
+              onClick={loadData}
               className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
             >
               <RefreshCw className="h-5 w-5" />
@@ -465,75 +433,55 @@ const DashboardPage = () => {
                   <option>Medium</option>
                   <option>Low</option>
                 </select>
-                <button className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex items-center space-x-2">
+                <Link
+                  to="/admin"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex items-center space-x-2"
+                >
                   <Plus className="h-4 w-4" />
-                  <span className="hidden sm:inline">Add Event</span>
-                </button>
+                  <span className="hidden sm:inline">Add Signal</span>
+                </Link>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-              {activeEvents.map((event) => (
-                <div key={event.id} className="border border-gray-200 rounded-xl p-4 sm:p-6 hover:shadow-lg transition-all duration-300 cursor-pointer group">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex items-center space-x-2 min-w-0 flex-1">
-                      <MapPin className="h-4 w-4 text-gray-600 flex-shrink-0" />
-                      <span className="text-sm font-medium text-gray-900 truncate">{event.location}</span>
-                    </div>
-                    <div className={`w-3 h-3 rounded-full ${getSeverityColor(event.severity)} flex-shrink-0`}></div>
-                  </div>
-
-                  <h3 className="font-bold text-gray-900 mb-2 group-hover:text-blue-600 transition-colors line-clamp-2">
-                    {event.title}
-                  </h3>
-
-                  <p className="text-gray-600 text-sm mb-4 line-clamp-2">
-                    {event.description}
-                  </p>
-
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center space-x-4 text-sm">
-                      <span className="font-medium">{event.signals} signals</span>
-                      <span className="text-gray-500">•</span>
-                      <span className="text-gray-500">{event.timeAgo}</span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-gray-500">Cluster #{event.id}</span>
-                    <Link
-                      to={`/event/${event.id}`}
-                      className="px-3 py-1 bg-blue-50 text-blue-600 rounded-lg text-sm font-medium hover:bg-blue-100 transition-colors"
-                    >
-                      View Details
-                    </Link>
-                  </div>
-                </div>
-              ))}
-            </div>
+            {activeEvents.length > 0 ? (
+              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                {activeEvents.map((event) => (
+                  <EventCard key={event.id} event={event} />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-16">
+                <AlertTriangle className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">No active events</h3>
+                <p className="text-gray-600">The system is monitoring for health signals. Events will appear here when clusters are detected.</p>
+              </div>
+            )}
           </div>
         </div>
 
         {/* Alert Panel */}
-        <div className="mt-8">
-          <div className="bg-gradient-to-r from-red-50 to-orange-50 border-l-4 border-red-500 rounded-xl p-4 sm:p-6">
-            <div className="flex flex-col sm:flex-row sm:items-start gap-4">
-              <AlertTriangle className="h-6 w-6 text-red-600 flex-shrink-0 mt-1" />
-              <div className="flex-1 min-w-0">
-                <h3 className="font-bold text-red-900 mb-2">High Severity Alert</h3>
-                <p className="text-red-800 mb-4">
-                  High severity cough cluster in Bandra, Mumbai – monitor closely. Recommend increased precautionary measures in the affected area.
-                </p>
-                <Link
-                  to="/event/34"
-                  className="inline-block px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors"
-                >
-                  View Full Report
-                </Link>
+        {events.filter(e => e.status === 'active' && e.severity === 'high').length > 0 && (
+          <div className="mt-8">
+            <div className="bg-gradient-to-r from-red-50 to-orange-50 border-l-4 border-red-500 rounded-xl p-4 sm:p-6">
+              <div className="flex flex-col sm:flex-row sm:items-start gap-4">
+                <AlertTriangle className="h-6 w-6 text-red-600 flex-shrink-0 mt-1" />
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-bold text-red-900 mb-2">High Severity Alert</h3>
+                  <p className="text-red-800 mb-4">
+                    {events.filter(e => e.status === 'active' && e.severity === 'high').length} high severity event(s) detected. 
+                    Monitor closely and follow recommended precautionary measures.
+                  </p>
+                  <Link
+                    to="/alerts"
+                    className="inline-block px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors"
+                  >
+                    View All Alerts
+                  </Link>
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Panpath AI Assistant */}
