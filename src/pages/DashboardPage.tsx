@@ -1,18 +1,24 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, Bell, Settings, User, MapPin, TrendingUp, AlertTriangle, Calendar, Filter, Bot, Activity, Zap, Shield, Clock, ChevronRight, Eye, Download, BarChart3, Plus, RefreshCw } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import MapComponent from '../components/MapComponent';
+import { getSignals, getCurrentUser, getUserProfile } from '../lib/supabase';
 
 const DashboardPage = () => {
   const [selectedDate, setSelectedDate] = useState('2025-06-28');
   const [timeFilter, setTimeFilter] = useState('24h');
   const [searchTerm, setSearchTerm] = useState('');
   const [showAIChat, setShowAIChat] = useState(false);
+  const [signals, setSignals] = useState([]);
+  const [filteredSignals, setFilteredSignals] = useState([]);
+  const [user, setUser] = useState(null);
+  const [userProfile, setUserProfile] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   const metricCards = [
     {
       title: 'Total Active Signals',
-      value: '142',
+      value: signals.length.toString(),
       change: '+5%',
       trend: 'up',
       description: 'Signals detected in the last 24h',
@@ -20,7 +26,7 @@ const DashboardPage = () => {
     },
     {
       title: 'New Events This Week',
-      value: '12',
+      value: Math.floor(signals.length / 5).toString(),
       change: '+2',
       trend: 'up',
       description: 'Cluster events generated',
@@ -35,8 +41,8 @@ const DashboardPage = () => {
       icon: BarChart3
     },
     {
-      title: 'Signals Under Investigation',
-      value: '4',
+      title: 'High Severity Signals',
+      value: signals.filter(s => s.severity === 'high').length.toString(),
       change: '-1',
       trend: 'down',
       description: 'Requiring expert review',
@@ -115,6 +121,56 @@ const DashboardPage = () => {
     }
   ];
 
+  // Load user data and signals on component mount
+  useEffect(() => {
+    loadUserData();
+    loadSignals();
+  }, []);
+
+  // Filter signals when search term changes
+  useEffect(() => {
+    if (searchTerm.trim()) {
+      const filtered = signals.filter(signal => 
+        signal.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        signal.type.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+      setFilteredSignals(filtered);
+    } else {
+      setFilteredSignals([]);
+    }
+  }, [searchTerm, signals]);
+
+  const loadUserData = async () => {
+    try {
+      const { user: currentUser } = await getCurrentUser();
+      if (currentUser) {
+        setUser(currentUser);
+        const { data: profile } = await getUserProfile(currentUser.id);
+        setUserProfile(profile);
+      }
+    } catch (error) {
+      console.error('Error loading user data:', error);
+    }
+  };
+
+  const loadSignals = async () => {
+    setIsLoading(true);
+    try {
+      const { data: signalsData } = await getSignals();
+      if (signalsData) {
+        setSignals(signalsData);
+      }
+    } catch (error) {
+      console.error('Error loading signals:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSearch = () => {
+    // Search is handled by useEffect when searchTerm changes
+  };
+
   const getSeverityColor = (severity: string) => {
     switch (severity) {
       case 'high': return 'bg-red-500';
@@ -133,15 +189,37 @@ const DashboardPage = () => {
     }
   };
 
-  const mapSignals = activeEvents.map(event => ({
-    id: event.id.toString(),
-    lat: event.coordinates[0],
-    lng: event.coordinates[1],
-    type: event.type,
-    severity: event.severity as 'low' | 'medium' | 'high',
-    location: event.location,
-    timestamp: event.timeAgo
-  }));
+  // Combine real signals with mock events for map display
+  const mapSignals = [
+    ...signals.map(signal => ({
+      id: signal.id,
+      lat: signal.latitude || 20.5937,
+      lng: signal.longitude || 78.9629,
+      type: signal.type,
+      severity: signal.severity as 'low' | 'medium' | 'high',
+      location: signal.location,
+      timestamp: signal.created_at
+    })),
+    ...activeEvents.map(event => ({
+      id: event.id.toString(),
+      lat: event.coordinates[0],
+      lng: event.coordinates[1],
+      type: event.type,
+      severity: event.severity as 'low' | 'medium' | 'high',
+      location: event.location,
+      timestamp: event.timeAgo
+    }))
+  ];
+
+  const getUserDisplayName = () => {
+    if (userProfile?.full_name) {
+      return userProfile.full_name;
+    }
+    if (user?.email) {
+      return user.email.split('@')[0];
+    }
+    return 'User';
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 pt-20">
@@ -151,7 +229,9 @@ const DashboardPage = () => {
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             {/* Left - Greeting */}
             <div>
-              <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Good Morning, Abraham</h1>
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
+                Good Morning, {getUserDisplayName()}
+              </h1>
               <p className="text-gray-600 text-sm sm:text-base">Here's an overview of recent disease signals and clusters detected.</p>
             </div>
 
@@ -183,13 +263,43 @@ const DashboardPage = () => {
                 
                 <div className="flex items-center space-x-2 px-3 py-2 bg-gray-100 rounded-lg">
                   <User className="h-5 w-5 text-gray-600" />
-                  <span className="font-medium text-gray-900 hidden sm:inline">Dr. Abraham</span>
+                  <span className="font-medium text-gray-900 hidden sm:inline">{getUserDisplayName()}</span>
                 </div>
               </div>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Search Results */}
+      {searchTerm && (
+        <div className="container mx-auto px-4 sm:px-6 py-4">
+          <div className="bg-white rounded-xl p-6 shadow-lg">
+            <h3 className="text-lg font-bold text-gray-900 mb-4">
+              Search Results for "{searchTerm}" ({filteredSignals.length} found)
+            </h3>
+            {filteredSignals.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filteredSignals.map((signal) => (
+                  <div key={signal.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                    <div className="flex items-start justify-between mb-2">
+                      <h4 className="font-semibold text-gray-900">{signal.type} Signal</h4>
+                      <span className={`w-3 h-3 rounded-full ${getSeverityColor(signal.severity)}`}></span>
+                    </div>
+                    <p className="text-gray-600 text-sm mb-2">{signal.location}</p>
+                    <p className="text-gray-500 text-xs">{new Date(signal.created_at).toLocaleString()}</p>
+                    {signal.notes && (
+                      <p className="text-gray-600 text-sm mt-2">{signal.notes}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-gray-500">No signals found matching your search.</p>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Filters */}
       <div className="container mx-auto px-4 sm:px-6 py-6">
@@ -223,7 +333,10 @@ const DashboardPage = () => {
           </div>
 
           <div className="flex items-center space-x-3">
-            <button className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+            <button 
+              onClick={loadSignals}
+              className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+            >
               <RefreshCw className="h-5 w-5" />
             </button>
             <button className="px-4 sm:px-6 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-medium hover:shadow-lg transition-all duration-300 flex items-center space-x-2">
