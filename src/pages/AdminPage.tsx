@@ -167,8 +167,8 @@ const AdminPage = () => {
             zoom={5}
             signals={signals.map(signal => ({
               id: signal.id,
-              lat: signal.latitude || 20.5937,
-              lng: signal.longitude || 78.9629,
+              lat: typeof signal.latitude === 'number' && !isNaN(signal.latitude) ? signal.latitude : 20.5937,
+              lng: typeof signal.longitude === 'number' && !isNaN(signal.longitude) ? signal.longitude : 78.9629,
               type: signal.type,
               severity: signal.severity as 'low' | 'medium' | 'high',
               location: signal.location,

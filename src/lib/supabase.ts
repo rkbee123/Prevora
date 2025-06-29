@@ -62,8 +62,7 @@ export const getUserProfile = async (userId: string) => {
   const { data, error } = await supabase
     .from('user_profiles')
     .select('*')
-    .eq('id', userId)
-    .single();
+    .eq('id', userId);
   return { data, error };
 };
 
