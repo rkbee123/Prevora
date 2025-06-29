@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { X, Mail, Lock, User, Building, Eye, EyeOff, Shield, CheckCircle } from 'lucide-react';
+import { X, Mail, Lock, User, Building, Eye, EyeOff, Shield, CheckCircle, AlertCircle } from 'lucide-react';
+import { signUp, signIn, resetPassword } from '../lib/supabase';
 
 interface AuthModalProps {
   mode: 'login' | 'signup' | 'admin';
@@ -18,8 +19,10 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
     otp: ''
   });
   const [showPassword, setShowPassword] = useState(false);
-  const [step, setStep] = useState(1); // For admin OTP flow
+  const [step, setStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
@@ -27,31 +30,109 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
       ...prev,
       [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value
     }));
+    setError('');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    
-    // Simulate API call
-    setTimeout(() => {
-      setIsLoading(false);
-      if (mode === 'admin' && step === 1) {
-        setStep(2);
-      } else {
-        onClose();
-        // Redirect based on mode
-        if (mode === 'admin') {
-          window.location.href = '/admin';
+    setError('');
+
+    try {
+      if (mode === 'signup') {
+        if (formData.password !== formData.confirmPassword) {
+          setError('Passwords do not match');
+          setIsLoading(false);
+          return;
+        }
+
+        const userData = {
+          user_type: formData.userType,
+          org_name: formData.orgName,
+          subscribed: formData.subscribed
+        };
+
+        const { data, error } = await signUp(formData.email, formData.password, userData);
+        
+        if (error) {
+          setError(error.message);
         } else {
-          window.location.href = '/dashboard';
+          setSuccess('Account created! Please check your email to verify your account.');
+          setTimeout(() => {
+            onClose();
+          }, 3000);
+        }
+      } else if (mode === 'login') {
+        const { data, error } = await signIn(formData.email, formData.password);
+        
+        if (error) {
+          setError(error.message);
+        } else {
+          setSuccess('Login successful!');
+          setTimeout(() => {
+            onClose();
+            window.location.href = '/dashboard';
+          }, 1000);
+        }
+      } else if (mode === 'admin') {
+        if (step === 1) {
+          // Simulate OTP sending
+          setStep(2);
+          setSuccess('OTP sent to your email');
+        } else {
+          // Simulate OTP verification
+          if (formData.otp === '123456') {
+            setSuccess('Admin login successful!');
+            setTimeout(() => {
+              onClose();
+              window.location.href = '/admin';
+            }, 1000);
+          } else {
+            setError('Invalid OTP. Please try again.');
+          }
         }
       }
-    }, 1500);
+    } catch (err) {
+      setError('An unexpected error occurred');
+    }
+
+    setIsLoading(false);
+  };
+
+  const handleForgotPassword = async () => {
+    if (!formData.email) {
+      setError('Please enter your email address');
+      return;
+    }
+
+    setIsLoading(true);
+    const { error } = await resetPassword(formData.email);
+    
+    if (error) {
+      setError(error.message);
+    } else {
+      setSuccess('Password reset email sent!');
+    }
+    
+    setIsLoading(false);
   };
 
   const renderLogin = () => (
     <form onSubmit={handleSubmit} className="space-y-6">
+      {error && (
+        <div className="flex items-center space-x-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+          <AlertCircle className="h-5 w-5 text-red-600" />
+          <span className="text-red-700 text-sm">{error}</span>
+        </div>
+      )}
+
+      {success && (
+        <div className="flex items-center space-x-2 p-3 bg-green-50 border border-green-200 rounded-lg">
+          <CheckCircle className="h-5 w-5 text-green-600" />
+          <span className="text-green-700 text-sm">{success}</span>
+        </div>
+      )}
+
       <div>
         <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
           Email Address
@@ -108,6 +189,8 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
       <div className="text-center">
         <button
           type="button"
+          onClick={handleForgotPassword}
+          disabled={isLoading}
           className="text-blue-600 hover:text-blue-700 text-sm font-medium"
         >
           Forgot password?
@@ -129,6 +212,20 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
 
   const renderSignup = () => (
     <form onSubmit={handleSubmit} className="space-y-6">
+      {error && (
+        <div className="flex items-center space-x-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+          <AlertCircle className="h-5 w-5 text-red-600" />
+          <span className="text-red-700 text-sm">{error}</span>
+        </div>
+      )}
+
+      {success && (
+        <div className="flex items-center space-x-2 p-3 bg-green-50 border border-green-200 rounded-lg">
+          <CheckCircle className="h-5 w-5 text-green-600" />
+          <span className="text-green-700 text-sm">{success}</span>
+        </div>
+      )}
+
       <div>
         <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
           Email Address
@@ -272,6 +369,20 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
 
   const renderAdmin = () => (
     <form onSubmit={handleSubmit} className="space-y-6">
+      {error && (
+        <div className="flex items-center space-x-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+          <AlertCircle className="h-5 w-5 text-red-600" />
+          <span className="text-red-700 text-sm">{error}</span>
+        </div>
+      )}
+
+      {success && (
+        <div className="flex items-center space-x-2 p-3 bg-green-50 border border-green-200 rounded-lg">
+          <CheckCircle className="h-5 w-5 text-green-600" />
+          <span className="text-green-700 text-sm">{success}</span>
+        </div>
+      )}
+
       {step === 1 ? (
         <>
           <div className="text-center mb-6">
@@ -313,6 +424,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
             <CheckCircle className="h-12 w-12 text-green-600 mx-auto mb-2" />
             <h3 className="text-lg font-semibold text-gray-900">Check Your Email</h3>
             <p className="text-sm text-gray-600">We've sent a one-time passcode to {formData.email}</p>
+            <p className="text-xs text-gray-500 mt-2">For demo purposes, use: 123456</p>
           </div>
 
           <div>

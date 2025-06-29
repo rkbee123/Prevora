@@ -1,5 +1,6 @@
 import React from 'react';
-import { MapPin, TrendingUp, AlertTriangle, Clock } from 'lucide-react';
+import { MapPin, TrendingUp, Clock } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 const LiveFeedSection = () => {
   const feedItems = [
@@ -100,18 +101,24 @@ const LiveFeedSection = () => {
                   <Clock className="h-4 w-4" />
                   <span>{item.timestamp}</span>
                 </div>
-                <button className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+                <Link 
+                  to="/alerts"
+                  className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                >
                   View Details
-                </button>
+                </Link>
               </div>
             </div>
           ))}
         </div>
 
         <div className="text-center mt-12">
-          <button className="px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-semibold hover:shadow-lg transition-all duration-300">
+          <Link
+            to="/alerts"
+            className="px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-semibold hover:shadow-lg transition-all duration-300"
+          >
             View All Signals
-          </button>
+          </Link>
         </div>
       </div>
     </section>
