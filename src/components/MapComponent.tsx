@@ -61,7 +61,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
   useEffect(() => {
     if (!mapRef.current || mapInstanceRef.current) return;
 
-    // Initialize map
+    // Initialize map with proper z-index
     mapInstanceRef.current = L.map(mapRef.current, {
       zoomControl: true,
       scrollWheelZoom: true,
@@ -69,7 +69,8 @@ const MapComponent: React.FC<MapComponentProps> = ({
       boxZoom: true,
       keyboard: true,
       dragging: true,
-      touchZoom: true
+      touchZoom: true,
+      zIndex: 1
     }).setView(center, zoom);
 
     // Add tile layer
@@ -79,6 +80,11 @@ const MapComponent: React.FC<MapComponentProps> = ({
       tileSize: 256,
       zoomOffset: 0
     }).addTo(mapInstanceRef.current);
+
+    // Set proper z-index for map container
+    if (mapRef.current) {
+      mapRef.current.style.zIndex = '1';
+    }
 
     // Cleanup on unmount
     return () => {
@@ -178,16 +184,16 @@ const MapComponent: React.FC<MapComponentProps> = ({
   }, [signals]);
 
   return (
-    <div className="relative">
+    <div className="relative" style={{ zIndex: 1 }}>
       <div 
         ref={mapRef} 
-        style={{ height, minHeight: '300px' }} 
+        style={{ height, minHeight: '300px', zIndex: 1 }} 
         className={`rounded-xl overflow-hidden border border-gray-200 ${className}`}
       />
       
       {/* Loading overlay */}
       {signals.length === 0 && (
-        <div className="absolute inset-0 bg-gray-100 rounded-xl flex items-center justify-center">
+        <div className="absolute inset-0 bg-gray-100 rounded-xl flex items-center justify-center" style={{ zIndex: 2 }}>
           <div className="text-center">
             <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
             <p className="text-gray-600 text-sm">Loading map data...</p>
@@ -197,7 +203,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
       
       {/* Signal count indicator */}
       {signals.length > 0 && (
-        <div className="absolute top-4 left-4 bg-white rounded-lg shadow-md px-3 py-2 z-[1000]">
+        <div className="absolute top-4 left-4 bg-white rounded-lg shadow-md px-3 py-2" style={{ zIndex: 1000 }}>
           <p className="text-sm font-medium text-gray-700">
             {signals.length} signal{signals.length !== 1 ? 's' : ''} displayed
           </p>

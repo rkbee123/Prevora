@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft, MapPin, Clock, TrendingUp, AlertTriangle, Users, Shield, Download, Share2, Eye, Calendar, Activity, BarChart3, Bot } from 'lucide-react';
 import MapComponent from '../components/MapComponent';
+import AIChat from '../components/AIChat';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, BarChart, Bar } from 'recharts';
 import { getEventById, getSignals } from '../lib/supabase';
 
@@ -44,7 +45,7 @@ const EventDetailPage = () => {
     }
   };
 
-  // Mock data for demo purposes
+  // Mock data for demo purposes with comprehensive analytics
   const getMockEventData = (eventId: string) => ({
     id: eventId,
     title: 'Cough cluster detected – Mumbai, Andheri',
@@ -80,18 +81,28 @@ const EventDetailPage = () => {
       { time: '12:30 PM', event: 'Public alert issued', severity: 'high' }
     ],
     signalTrend: [
-      { time: '06:00', signals: 2, anomaly: 0.1 },
-      { time: '07:00', signals: 3, anomaly: 0.15 },
-      { time: '08:00', signals: 5, anomaly: 0.25 },
-      { time: '09:00', signals: 8, anomaly: 0.4 },
-      { time: '10:00', signals: 15, anomaly: 0.7 },
-      { time: '11:00', signals: 21, anomaly: 0.87 },
-      { time: '12:00', signals: 19, anomaly: 0.82 }
+      { time: '06:00', signals: 2, anomaly: 0.1, cumulative: 2 },
+      { time: '07:00', signals: 3, anomaly: 0.15, cumulative: 5 },
+      { time: '08:00', signals: 5, anomaly: 0.25, cumulative: 10 },
+      { time: '09:00', signals: 8, anomaly: 0.4, cumulative: 18 },
+      { time: '10:00', signals: 15, anomaly: 0.7, cumulative: 33 },
+      { time: '11:00', signals: 21, anomaly: 0.87, cumulative: 54 },
+      { time: '12:00', signals: 19, anomaly: 0.82, cumulative: 73 }
     ],
     severityDistribution: [
       { severity: 'Low', count: 5, color: '#10b981' },
       { severity: 'Medium', count: 8, color: '#f59e0b' },
       { severity: 'High', count: 8, color: '#ef4444' }
+    ],
+    geographicSpread: [
+      { area: 'Andheri West', signals: 12, severity: 'high' },
+      { area: 'Andheri East', signals: 6, severity: 'medium' },
+      { area: 'Juhu', signals: 3, severity: 'low' }
+    ],
+    signalTypes: [
+      { type: 'Cough', count: 12, percentage: 57 },
+      { type: 'Fever', count: 5, percentage: 24 },
+      { type: 'Respiratory', count: 4, percentage: 19 }
     ]
   });
 
@@ -162,7 +173,7 @@ const EventDetailPage = () => {
   return (
     <div className="min-h-screen bg-gray-50 pt-20">
       {/* Header */}
-      <div className="bg-white shadow-sm border-b border-gray-200">
+      <div className="bg-white shadow-sm border-b border-gray-200 relative z-10">
         <div className="container mx-auto px-4 sm:px-6 py-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex items-center space-x-4">
@@ -313,7 +324,7 @@ const EventDetailPage = () => {
               <MapPin className="h-5 w-5 text-green-600" />
               <span>Event Location</span>
             </h3>
-            <div style={{ height: '300px' }}>
+            <div style={{ height: '300px', zIndex: 1 }}>
               <MapComponent 
                 signals={mapSignals}
                 height="300px"
@@ -331,7 +342,7 @@ const EventDetailPage = () => {
           </div>
         </div>
 
-        {/* Severity Distribution and Timeline */}
+        {/* Additional Analytics */}
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 mb-8">
           {/* Severity Distribution */}
           <div className="bg-white rounded-xl p-6 shadow-lg">
@@ -353,33 +364,58 @@ const EventDetailPage = () => {
             )}
           </div>
 
-          {/* Timeline */}
+          {/* Signal Types */}
           <div className="bg-white rounded-xl p-6 shadow-lg">
-            <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center space-x-2">
-              <Calendar className="h-5 w-5 text-purple-600" />
-              <span>Event Timeline</span>
-            </h3>
-            <div className="space-y-4">
-              {eventData.timeline ? eventData.timeline.map((item, index) => (
-                <div key={index} className="flex items-start space-x-4">
-                  <div className={`w-3 h-3 rounded-full mt-2 ${
-                    item.severity === 'high' ? 'bg-red-500' :
-                    item.severity === 'medium' ? 'bg-yellow-500' : 'bg-green-500'
-                  }`}></div>
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between">
-                      <p className="font-medium text-gray-900">{item.event}</p>
-                      <span className="text-sm text-gray-500">{item.time}</span>
+            <h3 className="text-lg font-bold text-gray-900 mb-4">Signal Type Breakdown</h3>
+            {eventData.signalTypes ? (
+              <div className="space-y-4">
+                {eventData.signalTypes.map((type, index) => (
+                  <div key={index} className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-4 h-4 bg-blue-600 rounded-full"></div>
+                      <span className="font-medium text-gray-900">{type.type}</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <span className="text-gray-600">{type.count}</span>
+                      <span className="text-sm text-gray-500">({type.percentage}%)</span>
                     </div>
                   </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                <p>Signal type data not available</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Timeline */}
+        <div className="bg-white rounded-xl p-6 shadow-lg mb-8">
+          <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center space-x-2">
+            <Calendar className="h-5 w-5 text-purple-600" />
+            <span>Event Timeline</span>
+          </h3>
+          <div className="space-y-4">
+            {eventData.timeline ? eventData.timeline.map((item, index) => (
+              <div key={index} className="flex items-start space-x-4">
+                <div className={`w-3 h-3 rounded-full mt-2 ${
+                  item.severity === 'high' ? 'bg-red-500' :
+                  item.severity === 'medium' ? 'bg-yellow-500' : 'bg-green-500'
+                }`}></div>
+                <div className="flex-1">
+                  <div className="flex items-center justify-between">
+                    <p className="font-medium text-gray-900">{item.event}</p>
+                    <span className="text-sm text-gray-500">{item.time}</span>
+                  </div>
                 </div>
-              )) : (
-                <div className="text-center py-8 text-gray-500">
-                  <Calendar className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                  <p>Timeline data not available</p>
-                </div>
-              )}
-            </div>
+              </div>
+            )) : (
+              <div className="text-center py-8 text-gray-500">
+                <Calendar className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                <p>Timeline data not available</p>
+              </div>
+            )}
           </div>
         </div>
 
@@ -462,37 +498,9 @@ const EventDetailPage = () => {
         >
           <Bot className="h-6 w-6 text-white group-hover:scale-110 transition-transform" />
         </button>
-        
-        {showAIChat && (
-          <div className="absolute bottom-16 right-0 w-80 bg-white rounded-xl shadow-2xl border border-gray-200 p-4">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-gray-900">Panpath AI</h3>
-              <button 
-                onClick={() => setShowAIChat(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                ×
-              </button>
-            </div>
-            <div className="space-y-3 mb-4">
-              <div className="bg-gray-100 rounded-lg p-3">
-                <p className="text-sm text-gray-700">I can help explain this event in detail. What would you like to know?</p>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <button className="w-full text-left p-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg">
-                "Explain the anomaly score"
-              </button>
-              <button className="w-full text-left p-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg">
-                "What should I do in this area?"
-              </button>
-              <button className="w-full text-left p-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg">
-                "How serious is this event?"
-              </button>
-            </div>
-          </div>
-        )}
       </div>
+
+      <AIChat isOpen={showAIChat} onClose={() => setShowAIChat(false)} />
     </div>
   );
 };

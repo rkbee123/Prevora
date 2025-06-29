@@ -3,7 +3,9 @@ import { Search, Bell, Settings, User, MapPin, TrendingUp, AlertTriangle, Calend
 import { Link } from 'react-router-dom';
 import MapComponent from '../components/MapComponent';
 import EventCard from '../components/EventCard';
+import AIChat from '../components/AIChat';
 import { getSignals, getCurrentUser, getUserProfile, getEvents } from '../lib/supabase';
+import { generateHealthReport } from '../lib/openai';
 
 const DashboardPage = () => {
   const [selectedDate, setSelectedDate] = useState('2025-06-28');
@@ -16,6 +18,8 @@ const DashboardPage = () => {
   const [user, setUser] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [aiReport, setAiReport] = useState('');
+  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
 
   const metricCards = [
     {
@@ -116,7 +120,7 @@ const DashboardPage = () => {
       if (currentUser) {
         setUser(currentUser);
         const { data: profile } = await getUserProfile(currentUser.id);
-        setUserProfile(profile?.[0] || null);
+        setUserProfile(profile || null);
       }
     } catch (error) {
       console.error('Error loading user data:', error);
@@ -141,6 +145,19 @@ const DashboardPage = () => {
       console.error('Error loading data:', error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const generateAIHealthReport = async () => {
+    setIsGeneratingReport(true);
+    try {
+      const report = await generateHealthReport(signals, events);
+      setAiReport(report);
+    } catch (error) {
+      console.error('Error generating AI report:', error);
+      setAiReport('Unable to generate health report at this time. Please try again later.');
+    } finally {
+      setIsGeneratingReport(false);
     }
   };
 
@@ -176,6 +193,9 @@ const DashboardPage = () => {
   ];
 
   const getUserDisplayName = () => {
+    if (userProfile?.username) {
+      return userProfile.username;
+    }
     if (userProfile?.full_name) {
       return userProfile.full_name;
     }
@@ -190,7 +210,7 @@ const DashboardPage = () => {
   return (
     <div className="min-h-screen bg-gray-50 pt-20">
       {/* Header */}
-      <div className="bg-white shadow-sm border-b border-gray-200">
+      <div className="bg-white shadow-sm border-b border-gray-200 relative z-10">
         <div className="container mx-auto px-4 sm:px-6 py-4">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             {/* Left - Greeting */}
@@ -307,6 +327,15 @@ const DashboardPage = () => {
             >
               <RefreshCw className="h-5 w-5" />
             </button>
+            <button 
+              onClick={generateAIHealthReport}
+              disabled={isGeneratingReport}
+              className="px-4 sm:px-6 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg font-medium hover:shadow-lg transition-all duration-300 flex items-center space-x-2 disabled:opacity-50"
+            >
+              <Bot className="h-4 w-4" />
+              <span className="hidden sm:inline">{isGeneratingReport ? 'Generating...' : 'AI Report'}</span>
+              <span className="sm:hidden">{isGeneratingReport ? '...' : 'AI'}</span>
+            </button>
             <button className="px-4 sm:px-6 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-medium hover:shadow-lg transition-all duration-300 flex items-center space-x-2">
               <Download className="h-4 w-4" />
               <span className="hidden sm:inline">Generate Report</span>
@@ -314,6 +343,19 @@ const DashboardPage = () => {
             </button>
           </div>
         </div>
+
+        {/* AI Health Report */}
+        {aiReport && (
+          <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-6 shadow-lg mb-8 border border-purple-200">
+            <div className="flex items-center space-x-3 mb-4">
+              <Bot className="h-6 w-6 text-purple-600" />
+              <h3 className="text-lg font-bold text-gray-900">AI Health Intelligence Report</h3>
+            </div>
+            <div className="prose prose-sm max-w-none text-gray-700">
+              <p className="whitespace-pre-wrap">{aiReport}</p>
+            </div>
+          </div>
+        )}
 
         {/* Main Dashboard Grid */}
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
@@ -336,7 +378,7 @@ const DashboardPage = () => {
               </div>
               
               {/* Map */}
-              <div className="relative">
+              <div className="relative" style={{ zIndex: 1 }}>
                 <MapComponent 
                   signals={mapSignals}
                   height="400px"
@@ -492,37 +534,9 @@ const DashboardPage = () => {
         >
           <Bot className="h-6 w-6 text-white group-hover:scale-110 transition-transform" />
         </button>
-        
-        {showAIChat && (
-          <div className="absolute bottom-16 right-0 w-80 bg-white rounded-xl shadow-2xl border border-gray-200 p-4">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-gray-900">Panpath AI</h3>
-              <button 
-                onClick={() => setShowAIChat(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                ×
-              </button>
-            </div>
-            <div className="space-y-3 mb-4">
-              <div className="bg-gray-100 rounded-lg p-3">
-                <p className="text-sm text-gray-700">Hello! I can help you understand the current health signals. What would you like to know?</p>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <button className="w-full text-left p-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg">
-                "Show me alerts near Mumbai"
-              </button>
-              <button className="w-full text-left p-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg">
-                "Explain the latest cluster"
-              </button>
-              <button className="w-full text-left p-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg">
-                "What's the risk level?"
-              </button>
-            </div>
-          </div>
-        )}
       </div>
+
+      <AIChat isOpen={showAIChat} onClose={() => setShowAIChat(false)} />
     </div>
   );
 };
