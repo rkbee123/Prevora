@@ -5,6 +5,7 @@ import MapComponent from '../components/MapComponent';
 import AIChat from '../components/AIChat';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } from 'recharts';
 import { getEventById, getSignals } from '../lib/supabase';
+import { generateEventRecommendations } from '../lib/openai';
 
 const EventDetailPage = () => {
   const { id } = useParams();
@@ -12,6 +13,9 @@ const EventDetailPage = () => {
   const [eventData, setEventData] = useState(null);
   const [relatedSignals, setRelatedSignals] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [recommendations, setRecommendations] = useState([]);
+  const [precautions, setPrecautions] = useState([]);
+  const [isGeneratingRecommendations, setIsGeneratingRecommendations] = useState(false);
 
   useEffect(() => {
     loadEventData();
@@ -31,19 +35,54 @@ const EventDetailPage = () => {
         // Load related signals
         const { data: signals } = await getSignals({ location: dbEvent.location });
         setRelatedSignals(signals || []);
+        
+        // Generate AI recommendations
+        generateRecommendations(dbEvent, signals || []);
       } else {
         // Fallback to mock data for demo
         const mockData = getMockEventData(id);
         setEventData(mockData);
         setRelatedSignals([]);
+        
+        // Generate AI recommendations for mock data
+        generateRecommendations(mockData, []);
       }
     } catch (error) {
       console.error('Error loading event data:', error);
       // Use mock data as fallback
       const mockData = getMockEventData(id);
       setEventData(mockData);
+      generateRecommendations(mockData, []);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const generateRecommendations = async (eventData, signals) => {
+    setIsGeneratingRecommendations(true);
+    try {
+      const { recommendations: aiRecommendations, precautions: aiPrecautions } = await generateEventRecommendations(eventData, signals);
+      setRecommendations(aiRecommendations);
+      setPrecautions(aiPrecautions);
+    } catch (error) {
+      console.error('Error generating recommendations:', error);
+      // Fallback recommendations
+      setRecommendations([
+        'Wear masks in crowded indoor areas',
+        'Practice enhanced hand hygiene',
+        'Monitor symptoms closely',
+        'Avoid unnecessary travel to affected areas',
+        'Stay informed through official channels',
+        'Seek medical attention if symptoms develop'
+      ]);
+      setPrecautions([
+        'Local hospitals have been notified and are on alert',
+        'Health authorities are monitoring the situation',
+        'Additional testing facilities have been set up',
+        'Emergency response teams are on standby'
+      ]);
+    } finally {
+      setIsGeneratingRecommendations(false);
     }
   };
 
@@ -168,6 +207,46 @@ const EventDetailPage = () => {
 
     const analytics = generateAnalytics(mockSignals, eventSeverity, signalCount);
 
+    // Generate event timeline
+    const eventTimeline = [
+      {
+        time: '08:15 AM',
+        event: 'First signal detected',
+        severity: 'medium',
+        details: 'Initial cough signal reported in Andheri West'
+      },
+      {
+        time: '09:30 AM',
+        event: 'Signal pattern identified',
+        severity: 'medium',
+        details: 'AI system detected unusual pattern in signal distribution'
+      },
+      {
+        time: '10:32 AM',
+        event: 'Event created',
+        severity: 'high',
+        details: 'Automatic event creation triggered by threshold crossing'
+      },
+      {
+        time: '10:45 AM',
+        event: 'Health authorities notified',
+        severity: 'high',
+        details: 'Automatic alert sent to local health department'
+      },
+      {
+        time: '11:15 AM',
+        event: 'Community alert issued',
+        severity: 'high',
+        details: 'Public notification system activated'
+      },
+      {
+        time: '12:30 PM',
+        event: 'Response team deployed',
+        severity: 'high',
+        details: 'Health officials dispatched to affected area'
+      }
+    ];
+
     return {
       id: eventId,
       title: 'Cough cluster detected – Mumbai, Andheri',
@@ -182,64 +261,7 @@ const EventDetailPage = () => {
       anomaly_score: 0.87,
       confidence: 0.92,
       affected_population: 45000,
-      recommendations: [
-        'Wear masks in crowded indoor areas',
-        'Avoid unnecessary travel to affected areas',
-        'Monitor symptoms closely and seek medical attention if needed',
-        'Ensure good ventilation in indoor spaces',
-        'Practice frequent hand hygiene',
-        'Stay home if experiencing respiratory symptoms',
-        'Maintain social distancing in public spaces',
-        'Disinfect frequently touched surfaces'
-      ],
-      precautions: [
-        'Local hospitals have been notified and are on alert',
-        'Health authorities are monitoring the situation',
-        'Additional testing facilities have been set up',
-        'Public health advisories have been issued',
-        'Emergency response teams are on standby',
-        'Contact tracing protocols activated',
-        'Enhanced surveillance in neighboring areas',
-        'Coordination with regional health departments'
-      ],
-      timeline: [
-        { 
-          time: '10:32 AM', 
-          event: 'Initial cluster detected', 
-          severity: 'medium', 
-          details: 'AI system identified anomalous pattern in cough signals' 
-        },
-        { 
-          time: '11:15 AM', 
-          event: 'Severity upgraded to high', 
-          severity: 'high', 
-          details: 'Additional signals confirmed cluster with 15+ reports' 
-        },
-        { 
-          time: '11:45 AM', 
-          event: 'Health authorities notified', 
-          severity: 'high', 
-          details: 'Automatic alert sent to regional health office and local hospitals' 
-        },
-        { 
-          time: '12:30 PM', 
-          event: 'Public alert issued', 
-          severity: 'high', 
-          details: 'Community notification system activated across affected areas' 
-        },
-        { 
-          time: '01:15 PM', 
-          event: 'Expert review initiated', 
-          severity: 'high', 
-          details: 'Epidemiologist assigned for detailed analysis and validation' 
-        },
-        { 
-          time: '02:00 PM', 
-          event: 'Response measures activated', 
-          severity: 'high', 
-          details: 'Local health teams deployed, testing facilities prepared' 
-        }
-      ],
+      timeline: eventTimeline,
       ...analytics
     };
   };
@@ -342,7 +364,7 @@ const EventDetailPage = () => {
               <div>
                 <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Event Detail</h1>
                 <p className="text-gray-600">
-                  Event #{eventData.id.slice(0, 8)} • {new Date(eventData.created_at).toLocaleString()}
+                  Event #{eventData.id.slice(0, 8)} • {new Date(eventData.created_at).toLocaleDateString()}
                 </p>
               </div>
             </div>
@@ -644,48 +666,54 @@ const EventDetailPage = () => {
             <Calendar className="h-5 w-5 text-purple-600" />
             <span>Event Timeline</span>
           </h3>
-          <div className="space-y-4">
-            {eventData.timeline ? eventData.timeline.map((item, index) => (
-              <div key={index} className="flex items-start space-x-4 p-4 bg-gray-50 rounded-lg">
-                <div className={`w-3 h-3 rounded-full mt-2 ${
-                  item.severity === 'high' ? 'bg-red-500' :
-                  item.severity === 'medium' ? 'bg-yellow-500' : 'bg-green-500'
-                }`}></div>
-                <div className="flex-1">
-                  <div className="flex items-center justify-between mb-1">
-                    <p className="font-medium text-gray-900">{item.event}</p>
-                    <span className="text-sm text-gray-500">{item.time}</span>
+          <div className="relative">
+            {/* Vertical line */}
+            <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-gray-200"></div>
+            
+            <div className="space-y-6">
+              {eventData.timeline ? eventData.timeline.map((item, index) => (
+                <div key={index} className="flex items-start ml-4">
+                  <div className={`absolute left-4 w-4 h-4 rounded-full -ml-2 ${
+                    item.severity === 'high' ? 'bg-red-500' :
+                    item.severity === 'medium' ? 'bg-yellow-500' : 'bg-green-500'
+                  } border-2 border-white`}></div>
+                  <div className="bg-gray-50 rounded-lg p-4 ml-6 w-full">
+                    <div className="flex items-center justify-between mb-1">
+                      <p className="font-medium text-gray-900">{item.event}</p>
+                      <span className="text-sm text-gray-500">{item.time}</span>
+                    </div>
+                    {item.details && (
+                      <p className="text-sm text-gray-600">{item.details}</p>
+                    )}
                   </div>
-                  {item.details && (
-                    <p className="text-sm text-gray-600">{item.details}</p>
-                  )}
                 </div>
-              </div>
-            )) : (
-              <div className="text-center py-8 text-gray-500">
-                <Calendar className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                <p>Timeline data not available</p>
-              </div>
-            )}
+              )) : (
+                <div className="text-center py-8 text-gray-500">
+                  <Calendar className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                  <p>Timeline data not available</p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
-        {/* Recommendations and Precautions */}
+        {/* AI-Generated Recommendations and Precautions */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
           {/* Recommendations */}
           <div className="bg-white rounded-xl p-6 shadow-lg">
             <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center space-x-2">
               <Shield className="h-5 w-5 text-green-600" />
-              <span>Recommended Actions</span>
+              <span>AI-Generated Recommendations</span>
+              {isGeneratingRecommendations && <Bot className="h-4 w-4 animate-spin text-blue-600" />}
             </h3>
             <ul className="space-y-3">
-              {eventData.recommendations ? eventData.recommendations.map((rec, index) => (
+              {recommendations.length > 0 ? recommendations.map((rec, index) => (
                 <li key={index} className="flex items-start space-x-3 p-3 bg-green-50 rounded-lg">
                   <CheckCircle className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
                   <span className="text-gray-700">{rec}</span>
                 </li>
               )) : (
-                <li className="text-gray-500">No specific recommendations available</li>
+                <li className="text-gray-500">Generating recommendations...</li>
               )}
             </ul>
           </div>
@@ -694,16 +722,17 @@ const EventDetailPage = () => {
           <div className="bg-white rounded-xl p-6 shadow-lg">
             <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center space-x-2">
               <AlertTriangle className="h-5 w-5 text-orange-600" />
-              <span>Current Precautions</span>
+              <span>AI-Generated Precautions</span>
+              {isGeneratingRecommendations && <Bot className="h-4 w-4 animate-spin text-blue-600" />}
             </h3>
             <ul className="space-y-3">
-              {eventData.precautions ? eventData.precautions.map((precaution, index) => (
+              {precautions.length > 0 ? precautions.map((precaution, index) => (
                 <li key={index} className="flex items-start space-x-3 p-3 bg-orange-50 rounded-lg">
                   <Zap className="w-5 h-5 text-orange-600 mt-0.5 flex-shrink-0" />
                   <span className="text-gray-700">{precaution}</span>
                 </li>
               )) : (
-                <li className="text-gray-500">No specific precautions listed</li>
+                <li className="text-gray-500">Generating precautions...</li>
               )}
             </ul>
           </div>
@@ -747,7 +776,7 @@ const EventDetailPage = () => {
         </div>
       </div>
 
-      {/* Panpath AI Assistant */}
+      {/* Prevora AI Assistant */}
       <div className="fixed bottom-6 right-6 z-50">
         <button 
           onClick={() => setShowAIChat(!showAIChat)}

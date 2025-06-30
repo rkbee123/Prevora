@@ -199,7 +199,7 @@ const AlertsPage = () => {
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
         <div className="bg-cream-50 rounded-lg shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
           {/* Header */}
-          <div className="bg-cream-50 p-4 flex justify-between items-center border-b border-gray-200">
+          <div className="bg-amber-50 p-4 flex justify-between items-center">
             <div className="flex items-center space-x-2">
               <div className="bg-amber-500 text-white px-3 py-1 rounded-md font-bold">
                 ALERT
@@ -323,7 +323,7 @@ const AlertsPage = () => {
                 </div>
 
                 <h3 className="text-xl font-bold text-gray-900 mb-4">
-                  {alert.type} Cluster Detected in {alert.location.split(',')[0]}
+                  {alert.type} Cluster Detected in {alert.location.split(',')[0]}: A Prevora Early Warning System Update
                 </h3>
 
                 <h4 className="text-lg font-semibold text-gray-900 mb-3">What happened and current status:</h4>
