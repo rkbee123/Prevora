@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Mail, Lock, User, Building, Eye, EyeOff, Shield, CheckCircle, AlertCircle, UserCheck, Send, Clock } from 'lucide-react';
+import { X, Mail, Lock, User, Building, Eye, EyeOff, Shield, CheckCircle, AlertCircle, UserCheck, Send, Clock, Timer } from 'lucide-react';
 import { signUp, signIn, resetPassword, sendAdminOTP, verifyAdminOTP, resendEmailVerification } from '../lib/supabase';
 
 interface AuthModalProps {
@@ -26,6 +26,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [rateLimitHit, setRateLimitHit] = useState(false);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
@@ -40,6 +41,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
     e.preventDefault();
     setIsLoading(true);
     setError('');
+    setRateLimitHit(false);
 
     try {
       if (mode === 'signup') {
@@ -72,7 +74,12 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
         const { data, error } = await signUp(formData.email, formData.password, userData);
         
         if (error) {
-          setError(error.message || 'Failed to create account');
+          if (error.code === 'RATE_LIMIT_EXCEEDED') {
+            setRateLimitHit(true);
+            setError(error.message);
+          } else {
+            setError(error.message || 'Failed to create account');
+          }
         } else {
           setSuccess('Account created! Please check your email for verification link before logging in.');
           setStep(2); // Move to email verification step
@@ -159,10 +166,17 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
 
   const handleResendVerification = async () => {
     setIsLoading(true);
+    setRateLimitHit(false);
+    
     const { error } = await resendEmailVerification();
     
     if (error) {
-      setError(error.message || 'Failed to resend verification email');
+      if (error.code === 'RATE_LIMIT_EXCEEDED') {
+        setRateLimitHit(true);
+        setError(error.message);
+      } else {
+        setError(error.message || 'Failed to resend verification email');
+      }
     } else {
       setSuccess('Verification email sent again!');
     }
@@ -170,14 +184,36 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
     setIsLoading(false);
   };
 
+  const renderRateLimitMessage = () => (
+    <div className="flex items-start space-x-3 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+      <Timer className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
+      <div className="text-sm">
+        <p className="text-amber-800 font-medium mb-2">Email Rate Limit Reached</p>
+        <p className="text-amber-700 mb-3">
+          Too many emails have been sent recently. This is a temporary restriction to prevent spam.
+        </p>
+        <div className="space-y-2 text-amber-700">
+          <p><strong>What you can do:</strong></p>
+          <ul className="list-disc list-inside space-y-1 ml-2">
+            <li>Wait 5-10 minutes and try again</li>
+            <li>Check your spam/junk folder for existing emails</li>
+            <li>Contact support if this issue persists</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  );
+
   const renderLogin = () => (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {error && (
+      {error && !rateLimitHit && (
         <div className="flex items-center space-x-2 p-3 bg-red-50 border border-red-200 rounded-lg">
           <AlertCircle className="h-5 w-5 text-red-600" />
           <span className="text-red-700 text-sm">{error}</span>
         </div>
       )}
+
+      {rateLimitHit && renderRateLimitMessage()}
 
       {success && (
         <div className="flex items-center space-x-2 p-3 bg-green-50 border border-green-200 rounded-lg">
@@ -276,11 +312,27 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
             </p>
           </div>
 
+          {rateLimitHit && renderRateLimitMessage()}
+
+          {error && !rateLimitHit && (
+            <div className="flex items-center space-x-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+              <AlertCircle className="h-5 w-5 text-red-600" />
+              <span className="text-red-700 text-sm">{error}</span>
+            </div>
+          )}
+
+          {success && (
+            <div className="flex items-center space-x-2 p-3 bg-green-50 border border-green-200 rounded-lg">
+              <CheckCircle className="h-5 w-5 text-green-600" />
+              <span className="text-green-700 text-sm">{success}</span>
+            </div>
+          )}
+
           <div className="space-y-4">
             <button
               onClick={handleResendVerification}
-              disabled={isLoading}
-              className="w-full px-6 py-3 border border-blue-600 text-blue-600 rounded-lg font-medium hover:bg-blue-50 transition-colors disabled:opacity-50"
+              disabled={isLoading || rateLimitHit}
+              className="w-full px-6 py-3 border border-blue-600 text-blue-600 rounded-lg font-medium hover:bg-blue-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading ? 'Sending...' : 'Resend Verification Email'}
             </button>
@@ -302,12 +354,14 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
 
     return (
       <form onSubmit={handleSubmit} className="space-y-6">
-        {error && (
+        {error && !rateLimitHit && (
           <div className="flex items-center space-x-2 p-3 bg-red-50 border border-red-200 rounded-lg">
             <AlertCircle className="h-5 w-5 text-red-600" />
             <span className="text-red-700 text-sm">{error}</span>
           </div>
         )}
+
+        {rateLimitHit && renderRateLimitMessage()}
 
         {success && (
           <div className="flex items-center space-x-2 p-3 bg-green-50 border border-green-200 rounded-lg">
@@ -479,7 +533,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
 
         <button
           type="submit"
-          disabled={isLoading}
+          disabled={isLoading || rateLimitHit}
           className="w-full px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-semibold hover:shadow-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isLoading ? 'Creating account...' : 'Sign Up & Verify Email'}

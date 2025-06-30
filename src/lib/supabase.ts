@@ -24,6 +24,19 @@ export const signUp = async (email: string, password: string, userData: any) => 
 
     if (error) {
       console.error('Signup error:', error);
+      
+      // Handle specific rate limit error
+      if (error.message?.includes('email rate limit exceeded') || 
+          error.message?.includes('over_email_send_rate_limit')) {
+        return { 
+          data: null, 
+          error: { 
+            message: 'Email rate limit exceeded. Please wait a few minutes before trying again, or contact support if this persists.',
+            code: 'RATE_LIMIT_EXCEEDED'
+          } 
+        };
+      }
+      
       return { data: null, error };
     }
 
@@ -47,8 +60,22 @@ export const signUp = async (email: string, password: string, userData: any) => 
     }
 
     return { data, error: null };
-  } catch (error) {
+  } catch (error: any) {
     console.error('Signup error:', error);
+    
+    // Handle network or other errors that might contain rate limit info
+    if (error?.message?.includes('email rate limit exceeded') || 
+        error?.message?.includes('over_email_send_rate_limit') ||
+        error?.status === 429) {
+      return { 
+        data: null, 
+        error: { 
+          message: 'Email rate limit exceeded. Please wait a few minutes before trying again, or contact support if this persists.',
+          code: 'RATE_LIMIT_EXCEEDED'
+        } 
+      };
+    }
+    
     return { data: null, error: { message: 'An unexpected error occurred during signup' } };
   }
 };
@@ -229,7 +256,7 @@ export const verifyAdminOTP = async (email: string, otp: string) => {
   }
 };
 
-// Email verification for regular users
+// Email verification for regular users with rate limit handling
 export const resendEmailVerification = async () => {
   try {
     const { data: { user } } = await supabase.auth.getUser();
@@ -246,9 +273,35 @@ export const resendEmailVerification = async () => {
       }
     });
 
+    if (error) {
+      // Handle rate limit error for resend as well
+      if (error.message?.includes('email rate limit exceeded') || 
+          error.message?.includes('over_email_send_rate_limit')) {
+        return { 
+          error: { 
+            message: 'Email rate limit exceeded. Please wait a few minutes before requesting another verification email.',
+            code: 'RATE_LIMIT_EXCEEDED'
+          } 
+        };
+      }
+    }
+
     return { error };
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error resending verification:', error);
+    
+    // Handle rate limit in catch block as well
+    if (error?.message?.includes('email rate limit exceeded') || 
+        error?.message?.includes('over_email_send_rate_limit') ||
+        error?.status === 429) {
+      return { 
+        error: { 
+          message: 'Email rate limit exceeded. Please wait a few minutes before requesting another verification email.',
+          code: 'RATE_LIMIT_EXCEEDED'
+        } 
+      };
+    }
+    
     return { error: { message: 'Failed to resend verification email' } };
   }
 };
