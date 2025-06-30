@@ -78,6 +78,21 @@ const Footer = () => {
           <p className="text-gray-500 text-xs mt-2">
             Prevora does not provide medical diagnosis. Data is anonymized and used for population-level insights only.
           </p>
+          <div className="flex items-center justify-center mt-4 space-x-2">
+            <span className="text-xs text-gray-500">Powered by</span>
+            <a 
+              href="https://stackblitz.com/bolt" 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="flex items-center space-x-1 bg-gray-800 rounded-md px-2 py-1 hover:bg-gray-700 transition-colors"
+            >
+              <svg width="16" height="16" viewBox="0 0 256 296" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M128 0L256 73.8446V221.689L128 295.533L0 221.689V73.8446L128 0Z" fill="#1389FD"/>
+                <path d="M128 59.0759L64 92.5759V159.576L128 193.076L192 159.576V92.5759L128 59.0759Z" fill="white"/>
+              </svg>
+              <span className="text-white text-xs font-medium">Bolt</span>
+            </a>
+          </div>
         </div>
       </div>
     </footer>
