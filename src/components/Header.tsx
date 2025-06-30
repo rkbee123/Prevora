@@ -90,7 +90,7 @@ const Header: React.FC<HeaderProps> = ({ onOpenAuth }) => {
               className="ml-2 hover:opacity-90 transition-opacity"
             >
               <img 
-                src="https://raw.githubusercontent.com/kickiniteasy/bolt-hackathon-badge/main/black-circle.svg" 
+                src="/img.jpg" 
                 alt="Powered by Bolt.new" 
                 className="h-8 w-8"
               />
@@ -107,7 +107,7 @@ const Header: React.FC<HeaderProps> = ({ onOpenAuth }) => {
               className="hover:opacity-90 transition-opacity"
             >
               <img 
-                src="https://raw.githubusercontent.com/kickiniteasy/bolt-hackathon-badge/main/black-circle.svg" 
+                src="/img.jpg" 
                 alt="Powered by Bolt.new" 
                 className="h-8 w-8"
               />
