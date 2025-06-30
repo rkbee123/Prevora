@@ -139,24 +139,49 @@ export const signIn = async (identifier: string, password: string) => {
         };
       }
       
-      // Get email from auth.users using RPC function or direct query
-      // Since we can't directly query auth.users, we'll use the user ID to get the email
-      // This requires the user to have confirmed their email first
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      // Get the user's email using the user ID from the profile
+      const { data: userData, error: userError } = await supabase
+        .from('auth.users')
+        .select('email')
+        .eq('id', profileData.id)
+        .single();
       
-      if (userError) {
-        // Try to get user by profile ID (this is a workaround)
+      if (userError || !userData) {
+        // Try to get the user's email through the auth API
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (user && user.id === profileData.id) {
+          // If we have the current user and it matches the profile ID, use that email
+          const { data, error } = await supabase.auth.signInWithPassword({
+            email: user.email!,
+            password
+          });
+          
+          if (error) {
+            return { data: null, error };
+          }
+          
+          return { data, error: null };
+        }
+        
+        // If we can't get the email, ask the user to use their email instead
         return { 
           data: null, 
           error: { message: 'Please use your email address to login' } 
         };
       }
       
-      // For now, return error asking user to use email
-      return { 
-        data: null, 
-        error: { message: 'Please use your email address to login' } 
-      };
+      // Now login with the email we found
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: userData.email,
+        password
+      });
+      
+      if (error) {
+        return { data: null, error };
+      }
+      
+      return { data, error: null };
     }
   } catch (error) {
     console.error('Login error:', error);
