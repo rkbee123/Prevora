@@ -25,6 +25,19 @@ export const signUp = async (email: string, password: string, userData: any) => 
     if (error) {
       console.error('Signup error:', error);
       
+      // Handle email service errors specifically
+      if (error.message?.includes('Error sending confirmation email') || 
+          error.message?.includes('unexpected_failure') ||
+          error.status === 500) {
+        return { 
+          data: null, 
+          error: { 
+            message: 'We are currently unable to send confirmation emails. This is a temporary issue with our email service. Please try again in a few minutes or contact support if the problem persists.',
+            code: 'EMAIL_SERVICE_ERROR'
+          } 
+        };
+      }
+      
       // Handle specific rate limit error
       if (error.message?.includes('email rate limit exceeded') || 
           error.message?.includes('over_email_send_rate_limit')) {
@@ -62,6 +75,19 @@ export const signUp = async (email: string, password: string, userData: any) => 
     return { data, error: null };
   } catch (error: any) {
     console.error('Signup error:', error);
+    
+    // Handle email service errors in catch block
+    if (error?.message?.includes('Error sending confirmation email') || 
+        error?.message?.includes('unexpected_failure') ||
+        error?.status === 500) {
+      return { 
+        data: null, 
+        error: { 
+          message: 'We are currently unable to send confirmation emails. This is a temporary issue with our email service. Please try again in a few minutes or contact support if the problem persists.',
+          code: 'EMAIL_SERVICE_ERROR'
+        } 
+      };
+    }
     
     // Handle network or other errors that might contain rate limit info
     if (error?.message?.includes('email rate limit exceeded') || 
@@ -274,6 +300,18 @@ export const resendEmailVerification = async () => {
     });
 
     if (error) {
+      // Handle email service errors
+      if (error.message?.includes('Error sending confirmation email') || 
+          error.message?.includes('unexpected_failure') ||
+          error.status === 500) {
+        return { 
+          error: { 
+            message: 'We are currently unable to send confirmation emails. This is a temporary issue with our email service. Please try again in a few minutes or contact support if the problem persists.',
+            code: 'EMAIL_SERVICE_ERROR'
+          } 
+        };
+      }
+      
       // Handle rate limit error for resend as well
       if (error.message?.includes('email rate limit exceeded') || 
           error.message?.includes('over_email_send_rate_limit')) {
@@ -289,6 +327,18 @@ export const resendEmailVerification = async () => {
     return { error };
   } catch (error: any) {
     console.error('Error resending verification:', error);
+    
+    // Handle email service errors in catch block
+    if (error?.message?.includes('Error sending confirmation email') || 
+        error?.message?.includes('unexpected_failure') ||
+        error?.status === 500) {
+      return { 
+        error: { 
+          message: 'We are currently unable to send confirmation emails. This is a temporary issue with our email service. Please try again in a few minutes or contact support if the problem persists.',
+          code: 'EMAIL_SERVICE_ERROR'
+        } 
+      };
+    }
     
     // Handle rate limit in catch block as well
     if (error?.message?.includes('email rate limit exceeded') || 
