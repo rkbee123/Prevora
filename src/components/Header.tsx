@@ -81,15 +81,45 @@ const Header: React.FC<HeaderProps> = ({ onOpenAuth }) => {
               <Play className="h-4 w-4" />
               <span>Demo</span>
             </Link>
+            
+            {/* Bolt.new Badge */}
+            <a 
+              href="https://bolt.new" 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="ml-2 hover:opacity-90 transition-opacity"
+            >
+              <img 
+                src="https://raw.githubusercontent.com/kickiniteasy/bolt-hackathon-badge/main/black-circle.svg" 
+                alt="Powered by Bolt.new" 
+                className="h-8 w-8"
+              />
+            </a>
           </div>
 
           {/* Mobile Menu Button */}
-          <button
-            className="lg:hidden p-2"
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
-          >
-            {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-          </button>
+          <div className="flex items-center space-x-3 lg:hidden">
+            {/* Bolt.new Badge (Mobile) */}
+            <a 
+              href="https://bolt.new" 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="hover:opacity-90 transition-opacity"
+            >
+              <img 
+                src="https://raw.githubusercontent.com/kickiniteasy/bolt-hackathon-badge/main/black-circle.svg" 
+                alt="Powered by Bolt.new" 
+                className="h-8 w-8"
+              />
+            </a>
+            
+            <button
+              className="p-2"
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+            >
+              {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+            </button>
+          </div>
         </div>
 
         {/* Mobile Navigation */}
