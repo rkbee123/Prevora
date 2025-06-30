@@ -97,7 +97,7 @@ const Header: React.FC<HeaderProps> = ({ onOpenAuth }) => {
             </a>
           </div>
 
-          {/* Mobile Menu Button */}
+          {/* Mobile Menu Button and Bolt Badge */}
           <div className="flex items-center space-x-3 lg:hidden">
             {/* Bolt.new Badge (Mobile) */}
             <a 
