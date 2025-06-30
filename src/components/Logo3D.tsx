@@ -4,17 +4,17 @@ import { Shield } from 'lucide-react';
 const Logo3D = () => {
   return (
     <div className="relative">
-      {/* Animated 3D-style logo with enhanced effects */}
+      {/* Enhanced 3D-style logo with improved effects */}
       <div className="relative w-10 h-10 transform-gpu">
         {/* Multiple background glows for depth */}
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-400 to-purple-600 rounded-xl blur-md opacity-75 animate-pulse"></div>
-        <div className="absolute inset-0 bg-gradient-to-br from-cyan-400 to-pink-600 rounded-xl blur-lg opacity-50 animate-pulse" style={{ animationDelay: '0.5s' }}></div>
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-purple-700 rounded-xl blur-md opacity-75 animate-pulse"></div>
+        <div className="absolute inset-0 bg-gradient-to-br from-cyan-500 to-pink-700 rounded-xl blur-lg opacity-50 animate-pulse" style={{ animationDelay: '0.5s' }}></div>
         
         {/* Main logo container with enhanced 3D effect */}
-        <div className="relative w-10 h-10 bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600 rounded-xl shadow-2xl transform hover:scale-110 transition-all duration-500 hover:rotate-12 hover:shadow-blue-500/50">
+        <div className="relative w-10 h-10 bg-gradient-to-br from-blue-700 via-purple-700 to-pink-700 rounded-xl shadow-2xl transform hover:scale-110 transition-all duration-500 hover:rotate-12 hover:shadow-blue-500/50">
           {/* Inner gradient layers for depth */}
-          <div className="absolute inset-1 bg-gradient-to-br from-blue-400 to-purple-400 rounded-lg opacity-60"></div>
-          <div className="absolute inset-2 bg-gradient-to-br from-blue-300 to-purple-300 rounded-md opacity-40"></div>
+          <div className="absolute inset-1 bg-gradient-to-br from-blue-500 to-purple-500 rounded-lg opacity-60"></div>
+          <div className="absolute inset-2 bg-gradient-to-br from-blue-400 to-purple-400 rounded-md opacity-40"></div>
           
           {/* Shield icon with enhanced styling */}
           <div className="absolute inset-0 flex items-center justify-center">

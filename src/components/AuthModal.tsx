@@ -589,12 +589,15 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
 
   const renderAdmin = () => (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {error && (
+      {error && !rateLimitHit && !emailServiceError && (
         <div className="flex items-center space-x-2 p-3 bg-red-50 border border-red-200 rounded-lg">
           <AlertCircle className="h-5 w-5 text-red-600" />
           <span className="text-red-700 text-sm">{error}</span>
         </div>
       )}
+
+      {emailServiceError && renderEmailServiceErrorMessage()}
+      {rateLimitHit && renderRateLimitMessage()}
 
       {success && (
         <div className="flex items-center space-x-2 p-3 bg-green-50 border border-green-200 rounded-lg">

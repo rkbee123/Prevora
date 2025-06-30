@@ -342,7 +342,7 @@ Description: ${alert.description}
                     </div>
                     <div>
                       <div className="text-sm text-gray-600">Type:</div>
-                      <div className="text-xl font-bold text-gray-900">{alert.severity}</div>
+                      <div className="text-xl font-bold text-gray-900">{alert.type || 'Unknown'}</div>
                     </div>
                     <div>
                       <div className="text-sm text-gray-600">Status:</div>
