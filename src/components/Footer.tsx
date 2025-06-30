@@ -93,6 +93,22 @@ const Footer = () => {
               <span className="text-white text-xs font-medium">Bolt</span>
             </a>
           </div>
+          
+          {/* Bolt.new Badge */}
+          <div className="flex justify-center mt-6">
+            <a 
+              href="https://bolt.new" 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="inline-block"
+            >
+              <img 
+                src="https://raw.githubusercontent.com/kickiniteasy/bolt-hackathon-badge/main/white-circle.svg" 
+                alt="Powered by Bolt.new" 
+                className="h-12 w-12 hover:opacity-90 transition-opacity"
+              />
+            </a>
+          </div>
         </div>
       </div>
     </footer>
