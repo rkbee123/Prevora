@@ -48,7 +48,7 @@ const AIAssistantSection = () => {
                 </div>
                 
                 <p className="text-xl text-gray-600 mb-8 leading-relaxed">
-                  Meet Panpath AI, built right into your dashboard. Ask anything about health signals, 
+                  Meet Prevora AI, built right into your dashboard. Ask anything about health signals, 
                   get instant insights, and receive personalized guidance for your community.
                 </p>
 
@@ -75,7 +75,7 @@ const AIAssistantSection = () => {
                   onClick={() => setShowAIChat(true)}
                   className="px-8 py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg font-semibold hover:shadow-lg transition-all duration-300"
                 >
-                  Try Panpath AI
+                  Try Prevora AI
                 </button>
               </div>
 
@@ -87,7 +87,7 @@ const AIAssistantSection = () => {
                       <Bot className="h-5 w-5 text-white" />
                     </div>
                     <div>
-                      <h3 className="font-semibold text-white">Panpath AI</h3>
+                      <h3 className="font-semibold text-white">Prevora AI</h3>
                       <p className="text-xs text-gray-400">Online • Ready to help</p>
                     </div>
                   </div>
