@@ -15,6 +15,7 @@ const AlertsPage = () => {
   const [activeTab, setActiveTab] = useState('report');
   const [alertRecommendations, setAlertRecommendations] = useState({});
   const [isGeneratingRecommendations, setIsGeneratingRecommendations] = useState({});
+  const [isSubscribed, setIsSubscribed] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -166,8 +167,8 @@ const AlertsPage = () => {
   };
 
   const filteredAlerts = displayAlerts.filter(alert => {
-    const matchesSearch = alert.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         alert.location?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = (alert.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         alert.location?.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesFilter = selectedFilter === 'all' || alert.severity === selectedFilter;
     return matchesSearch && matchesFilter;
   });
@@ -188,6 +189,38 @@ const AlertsPage = () => {
     generateRecommendationsForAlert(alert);
   };
 
+  const handleExport = () => {
+    // Create a text representation of the alerts
+    const alertsText = filteredAlerts.map(alert => 
+      `Alert ID: ${alert.id}
+Title: ${alert.title}
+Location: ${alert.location}
+Type: ${alert.type || 'Unknown'}
+Severity: ${alert.severity}
+Status: ${alert.status}
+Signals: ${alert.signals}
+Timestamp: ${alert.timestamp}
+Affected Population: ${alert.affected_population?.toLocaleString() || 'Unknown'}
+Description: ${alert.description}
+      
+`).join('\n---\n\n');
+    
+    // Create a blob and download link
+    const blob = new Blob([alertsText], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `prevora-alerts-${new Date().toISOString().split('T')[0]}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const toggleSubscription = () => {
+    setIsSubscribed(!isSubscribed);
+  };
+
   const renderAlertDetailModal = () => {
     if (!selectedAlert) return null;
 
@@ -197,7 +230,7 @@ const AlertsPage = () => {
 
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <div className="bg-cream-50 rounded-lg shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="bg-white rounded-lg shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
           {/* Header */}
           <div className="bg-amber-50 p-4 flex justify-between items-center">
             <div className="flex items-center space-x-2">
@@ -435,11 +468,17 @@ const AlertsPage = () => {
               <p className="text-gray-600 mt-2">Real-time health alerts and early warning notifications</p>
             </div>
             <div className="flex items-center space-x-3">
-              <button className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors flex items-center space-x-2">
+              <button 
+                onClick={toggleSubscription}
+                className={`px-4 py-2 ${isSubscribed ? 'bg-red-600' : 'bg-blue-600'} text-white rounded-lg font-medium hover:${isSubscribed ? 'bg-red-700' : 'bg-blue-700'} transition-colors flex items-center space-x-2`}
+              >
                 <Bell className="h-4 w-4" />
-                <span>Subscribe</span>
+                <span>{isSubscribed ? 'Subscribed' : 'Subscribe'}</span>
               </button>
-              <button className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors flex items-center space-x-2">
+              <button 
+                onClick={handleExport}
+                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors flex items-center space-x-2"
+              >
                 <Download className="h-4 w-4" />
                 <span>Export</span>
               </button>
