@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, MapPin, TrendingUp, Clock, AlertTriangle, Filter, Calendar, Tag, RefreshCw, Eye, ExternalLink, BarChart3, Users, Activity, ArrowRight, Heart, MessageSquare, Share2, Bookmark, ThumbsUp } from 'lucide-react';
+import { Search, MapPin, TrendingUp, Clock, AlertTriangle, Filter, Calendar, Tag, RefreshCw, Eye, ExternalLink, BarChart3, Users, Activity, ArrowRight, Heart, MessageSquare, Share2, Bookmark, ThumbsUp, X, Bell } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { getBlogs, getSignals, getEvents } from '../lib/supabase';
 import { generateBlogContent } from '../lib/openai';
