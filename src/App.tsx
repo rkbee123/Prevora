@@ -10,6 +10,9 @@ import ContactPage from './pages/ContactPage';
 import AlertsPage from './pages/AlertsPage';
 import AdminPage from './pages/AdminPage';
 import EventDetailPage from './pages/EventDetailPage';
+import SupportPage from './pages/SupportPage';
+import DonationSuccessPage from './pages/DonationSuccessPage';
+import DonationCancelledPage from './pages/DonationCancelledPage';
 import Footer from './components/Footer';
 import AuthModal from './components/AuthModal';
 import { supabase } from './lib/supabase';
@@ -54,6 +57,9 @@ function App() {
           <Route path="/admin" element={<AdminPage />} />
           <Route path="/event/:id" element={<EventDetailPage />} />
           <Route path="/contact" element={<ContactPage />} />
+          <Route path="/support" element={<SupportPage />} />
+          <Route path="/donation-success" element={<DonationSuccessPage />} />
+          <Route path="/donation-cancelled" element={<DonationCancelledPage />} />
         </Routes>
         <Footer />
         

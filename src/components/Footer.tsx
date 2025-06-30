@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Shield, Linkedin, Twitter, Github, Mail } from 'lucide-react';
+import { Shield, Linkedin, Twitter, Github, Mail, Heart } from 'lucide-react';
+import DonateButton from './DonateButton';
 
 const Footer = () => {
   return (
@@ -56,10 +57,15 @@ const Footer = () => {
           </div>
 
           <div>
-            <h3 className="font-semibold mb-4">Legal</h3>
-            <ul className="space-y-2">
-              <li><a href="#" className="text-gray-400 hover:text-white transition-colors text-sm">Privacy Policy</a></li>
-              <li><a href="#" className="text-gray-400 hover:text-white transition-colors text-sm">Terms of Service</a></li>
+            <h3 className="font-semibold mb-4">Support Us</h3>
+            <p className="text-gray-400 text-sm mb-4">Help us expand our early warning system to more communities.</p>
+            <DonateButton 
+              buttonText="Donate" 
+              showIcon={true}
+              className="px-4 py-2 text-sm"
+            />
+            <ul className="space-y-2 mt-4">
+              <li><Link to="/support" className="text-gray-400 hover:text-white transition-colors text-sm">Ways to Support</Link></li>
               <li><Link to="/contact" className="text-gray-400 hover:text-white transition-colors text-sm">Contact Us</Link></li>
             </ul>
           </div>

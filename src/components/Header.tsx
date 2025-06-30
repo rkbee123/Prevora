@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, LogIn, Play, Bell, Shield } from 'lucide-react';
+import { Menu, X, LogIn, Play, Bell, Shield, Heart } from 'lucide-react';
 import Logo3D from './Logo3D';
 
 interface HeaderProps {
@@ -19,6 +19,7 @@ const Header: React.FC<HeaderProps> = ({ onOpenAuth }) => {
     { name: 'Dashboard', path: '/dashboard' },
     { name: 'Alerts', path: '/alerts' },
     { name: 'Contact', path: '/contact' },
+    { name: 'Support Us', path: '/support' },
   ];
 
   const isActive = (path: string) => location.pathname === path;
@@ -59,6 +60,12 @@ const Header: React.FC<HeaderProps> = ({ onOpenAuth }) => {
             >
               <Bell className="h-5 w-5" />
               <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">3</span>
+            </Link>
+            <Link 
+              to="/support"
+              className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+            >
+              <Heart className="h-5 w-5" />
             </Link>
             <button 
               onClick={() => onOpenAuth('login')}
@@ -112,6 +119,14 @@ const Header: React.FC<HeaderProps> = ({ onOpenAuth }) => {
                   <Bell className="h-4 w-4" />
                   <span>Alerts</span>
                   <span className="ml-auto w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">3</span>
+                </Link>
+                <Link 
+                  to="/support"
+                  className="flex items-center space-x-2 px-4 py-2 text-sm font-medium text-gray-700 hover:text-red-600 transition-colors"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  <Heart className="h-4 w-4" />
+                  <span>Support Us</span>
                 </Link>
                 <button 
                   onClick={() => {

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Heart, Shield, Users } from 'lucide-react';
+import DonateButton from '../DonateButton';
 
 const WhyWeDoItSection = () => {
   return (
@@ -62,9 +63,7 @@ const WhyWeDoItSection = () => {
             </div>
           </div>
 
-          <button className="px-8 py-4 bg-gradient-to-r from-pink-500 to-red-600 text-white rounded-lg font-semibold text-lg hover:shadow-2xl transition-all duration-300 hover:scale-105">
-            Support Our Mission
-          </button>
+          <DonateButton className="px-8 py-4 text-lg" />
         </div>
       </div>
     </section>
