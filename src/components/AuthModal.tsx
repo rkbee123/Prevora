@@ -55,6 +55,12 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
           return;
         }
 
+        if (!formData.email.trim()) {
+          setError('Email is required');
+          setIsLoading(false);
+          return;
+        }
+
         const userData = {
           username: formData.username,
           full_name: formData.fullName,
@@ -66,16 +72,22 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
         const { data, error } = await signUp(formData.email, formData.password, userData);
         
         if (error) {
-          setError(error.message);
+          setError(error.message || 'Failed to create account');
         } else {
           setSuccess('Account created! Please check your email for verification link before logging in.');
           setStep(2); // Move to email verification step
         }
       } else if (mode === 'login') {
+        if (!formData.identifier.trim()) {
+          setError('Email or username is required');
+          setIsLoading(false);
+          return;
+        }
+
         const { data, error } = await signIn(formData.identifier, formData.password);
         
         if (error) {
-          setError(error.message);
+          setError(error.message || 'Failed to login');
         } else {
           setSuccess('Login successful!');
           setTimeout(() => {
@@ -85,19 +97,31 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
         }
       } else if (mode === 'admin') {
         if (step === 1) {
+          if (!formData.email.trim()) {
+            setError('Email is required');
+            setIsLoading(false);
+            return;
+          }
+
           // Send OTP to admin email
           const { error } = await sendAdminOTP(formData.email);
           if (error) {
-            setError(error.message);
+            setError(error.message || 'Failed to send OTP');
           } else {
             setStep(2);
-            setSuccess('OTP sent to your email address');
+            setSuccess('OTP sent to your email address. For demo, you can also use: 123456');
           }
         } else {
+          if (!formData.otp.trim()) {
+            setError('OTP is required');
+            setIsLoading(false);
+            return;
+          }
+
           // Verify OTP
           const { error } = await verifyAdminOTP(formData.email, formData.otp);
           if (error) {
-            setError(error.message);
+            setError(error.message || 'Invalid OTP');
           } else {
             setSuccess('Admin login successful!');
             setTimeout(() => {
@@ -108,6 +132,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
         }
       }
     } catch (err) {
+      console.error('Auth error:', err);
       setError('An unexpected error occurred');
     }
 
@@ -124,7 +149,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
     const { error } = await resetPassword(formData.identifier);
     
     if (error) {
-      setError(error.message);
+      setError(error.message || 'Failed to send reset email');
     } else {
       setSuccess('Password reset email sent!');
     }
@@ -137,7 +162,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
     const { error } = await resendEmailVerification();
     
     if (error) {
-      setError(error.message);
+      setError(error.message || 'Failed to resend verification email');
     } else {
       setSuccess('Verification email sent again!');
     }
@@ -163,19 +188,19 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
 
       <div>
         <label htmlFor="identifier" className="block text-sm font-medium text-gray-700 mb-2">
-          Email or Username
+          Email Address
         </label>
         <div className="relative">
-          <UserCheck className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+          <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
           <input
-            type="text"
+            type="email"
             id="identifier"
             name="identifier"
             value={formData.identifier}
             onChange={handleInputChange}
             required
             className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-            placeholder="Enter email or username"
+            placeholder="Enter your email address"
           />
         </div>
       </div>
@@ -541,7 +566,9 @@ const AuthModal: React.FC<AuthModalProps> = ({ mode, onClose, onSwitchMode }) =>
             <CheckCircle className="h-12 w-12 text-green-600 mx-auto mb-2" />
             <h3 className="text-lg font-semibold text-gray-900">Check Your Email</h3>
             <p className="text-sm text-gray-600">We've sent a verification code to {formData.email}</p>
-            <p className="text-xs text-gray-500 mt-2">For demo purposes, use: 123456</p>
+            <p className="text-xs text-gray-500 mt-2 p-2 bg-yellow-50 rounded">
+              <strong>Demo:</strong> Use OTP <code className="bg-yellow-200 px-1 rounded">123456</code> for testing
+            </p>
           </div>
 
           <div>
