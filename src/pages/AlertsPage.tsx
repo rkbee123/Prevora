@@ -176,7 +176,7 @@ const AlertsPage = () => {
     id: alert.id,
     lat: alert.coordinates?.[0] || 20.5937,
     lng: alert.coordinates?.[1] || 78.9629,
-    type: alert.type,
+    type: alert.type || 'Unknown',
     severity: alert.severity as 'low' | 'medium' | 'high',
     location: alert.location,
     timestamp: alert.timestamp
@@ -227,7 +227,7 @@ const AlertsPage = () => {
           {/* Title */}
           <div className="p-6 pb-2">
             <h2 className="text-3xl font-bold text-gray-900">
-              ALERT: {alert.type} signals spike in {alert.location.split(',')[0]}
+              ALERT: {(alert.type || 'Unknown')} signals spike in {alert.location.split(',')[0]}
             </h2>
           </div>
 
@@ -323,12 +323,12 @@ const AlertsPage = () => {
                 </div>
 
                 <h3 className="text-xl font-bold text-gray-900 mb-4">
-                  {alert.type} Cluster Detected in {alert.location.split(',')[0]}: A Prevora Early Warning System Update
+                  {(alert.type || 'Unknown')} Cluster Detected in {alert.location.split(',')[0]}: A Prevora Early Warning System Update
                 </h3>
 
                 <h4 className="text-lg font-semibold text-gray-900 mb-3">What happened and current status:</h4>
                 <p className="text-gray-700 mb-6">
-                  A concerning health event has been detected in {alert.location}, specifically in the {alert.location.split(',')[0]} area. An unusual spike in {alert.type.toLowerCase()} signals has been reported, with a total of {alert.signals || 25} signals within a 24-hour period. The signals have been categorized based on severity, with {Math.floor((alert.signals || 25) * 0.3)} signals classified as high, {Math.floor((alert.signals || 25) * 0.4)} as medium, and {Math.floor((alert.signals || 25) * 0.3)} as low. This detection was made possible through an automated cluster detection system powered by artificial intelligence. As of the latest update on {alert.timestamp || '30/6/2025'}, the event is still active, with additional signals being detected periodically, indicating ongoing transmission in the community.
+                  A concerning health event has been detected in {alert.location}, specifically in the {alert.location.split(',')[0]} area. An unusual spike in {(alert.type || 'unknown').toLowerCase()} signals has been reported, with a total of {alert.signals || 25} signals within a 24-hour period. The signals have been categorized based on severity, with {Math.floor((alert.signals || 25) * 0.3)} signals classified as high, {Math.floor((alert.signals || 25) * 0.4)} as medium, and {Math.floor((alert.signals || 25) * 0.3)} as low. This detection was made possible through an automated cluster detection system powered by artificial intelligence. As of the latest update on {alert.timestamp || '30/6/2025'}, the event is still active, with additional signals being detected periodically, indicating ongoing transmission in the community.
                 </p>
 
                 <h4 className="text-lg font-semibold text-gray-900 mb-3">What this means for the community:</h4>
@@ -579,7 +579,7 @@ const AlertsPage = () => {
                     </div>
                     <div className="bg-white rounded-lg p-3">
                       <div className="text-sm text-gray-600">Alert Type</div>
-                      <div className="text-lg font-bold text-gray-900">{alert.type}</div>
+                      <div className="text-lg font-bold text-gray-900">{alert.type || 'Unknown'}</div>
                     </div>
                   </div>
 
